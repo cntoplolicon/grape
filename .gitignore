@@ -5,3 +5,4 @@ Makefile
 *.make
 *Debug
 *Release
+*.pyc

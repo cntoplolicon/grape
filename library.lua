@@ -13,14 +13,16 @@ function setup_project(proj, ...)
         links {"GLUS", "glfw3", "glew"}
         libdirs {"../lib"}
 
+        flags {"ExtraWarnings", "FatalWarnings"}
+
         configuration "Debug"
             defines {"DEBUG", "_DEBUG"}
-            flags "Symbols"
+            flags {"Symbols"}
             targetname (proj .. "Debug")
 
         configuration "Release"
             defines {"RELEASE", "NDEBUG"};
-            flags {"OptimizeSpeed", "ExtraWarnings"};
+            flags {"OptimizeSpeed"};
             targetname (proj .. "Release")
                   
         configuration "linux"
