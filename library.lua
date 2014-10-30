@@ -10,7 +10,7 @@ function setup_project(proj, ...)
 
         files {...}
         includedirs {"../include/GLUS"}
-        links {"GLUS", "glfw3", "glew"}
+        links {"GLUS", "glfw3", "GLEW"}
         libdirs {"../lib"}
 
         flags {"ExtraWarnings", "FatalWarnings"}
@@ -26,7 +26,7 @@ function setup_project(proj, ...)
             targetname (proj .. "Release")
                   
         configuration "linux"
-            links {"GL", "GLU", "X11"}
+            links {"GL", "GLU", "X11", "Xxf86vm", "pthread", "Xrandr", "Xi"}
 
         configuration "macosx"
             linkoptions {"-framework OpenGL"}
