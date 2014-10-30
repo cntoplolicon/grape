@@ -37,8 +37,6 @@ import ycm_core
 flags = [
 '-Wall',
 '-Werror',
-'-MMD' ,
-'-MP',
 '-DDEBUG',
 '-D_DEBUG',
 #'-Wc++98-compat',
