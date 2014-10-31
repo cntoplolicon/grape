@@ -11,7 +11,6 @@ function setup_project(proj, ...)
         files {...}
         includedirs {"../include/GLUS"}
         links {"GLUS", "glfw3", "GLEW"}
-        libdirs {"../lib"}
 
         flags {"ExtraWarnings", "FatalWarnings"}
 
@@ -27,9 +26,11 @@ function setup_project(proj, ...)
                   
         configuration "linux"
             links {"GL", "GLU", "X11", "Xxf86vm", "pthread", "Xrandr", "Xi"}
+            libdirs {"../lib/linux"}
 
         configuration "macosx"
             linkoptions {"-framework OpenGL"}
+            libdirs {"../lib/osx"}
 
         configuration {"gmake"}
             buildoptions {"-std=c++11" }
