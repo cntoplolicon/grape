@@ -9,7 +9,7 @@ function setup_project(proj, ...)
         language "c++"
 
         files {...}
-        includedirs {"../include/GLUS"}
+        includedirs {"../include/GLUS", "../framework"}
         links {"GLUS", "glfw3", "GLEW"}
 
         flags {"ExtraWarnings", "FatalWarnings"}

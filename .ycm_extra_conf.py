@@ -63,6 +63,8 @@ flags = [
 # harmful
 '-I',
 './include/GLUS',
+'-I',
+'./framework',
 '-isystem',
 '/usr/include',
 '-isystem',
