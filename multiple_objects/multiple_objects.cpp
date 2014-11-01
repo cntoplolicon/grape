@@ -198,8 +198,6 @@ void initArrayVertexObject()
     glBindBuffer(GL_ARRAY_BUFFER, vertexBufferObject);
     glGenVertexArrays(1, &vertexArrayObject);
 
-    glUseProgram(program.program);
-
     glBindVertexArray(vertexArrayObject);
 
     GLint positionLocation = glGetAttribLocation(program.program, "position");
@@ -216,8 +214,6 @@ void initArrayVertexObject()
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-    glUseProgram(0);
 }
 
 GLUSboolean init()
