@@ -18,5 +18,7 @@
         0 1 0 1
         1 0 0 1
     </attribute>
-    <arrays cmd="triangles" start="0" count="6" />
+    <indices cmd="triangles" type="ushort">
+        0 1 2 3 4 5
+    </indices>
 </mesh>

@@ -283,32 +283,16 @@ class Mesh
             attributes[i].offset = totalSize;
             totalSize += std::get<1>(vertexData[i]);
         }
-        char *buffer = new char[totalSize];
-        for (size_t i = 0; i < vertexData.size(); i++) {
-            memcpy(buffer + attributes[i].offset, std::get<0>(vertexData[i]), std::get<1>(vertexData[i]));
-        }
 
         GLint oldArrayBuffer;
         glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &oldArrayBuffer);
         glGenBuffers(1, &vertexBuffer);
         glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-        glBufferData(GL_ARRAY_BUFFER, totalSize, buffer, GL_STATIC_DRAW);
-        /*for (size_t i = 0; i < vertexData.size(); i++) {
+        glBufferData(GL_ARRAY_BUFFER, totalSize, nullptr, GL_STATIC_DRAW);
+        for (size_t i = 0; i < vertexData.size(); i++) {
             glBufferSubData(GL_ARRAY_BUFFER, attributes[i].offset, std::get<1>(vertexData[i]), std::get<0>(vertexData[i]));
-        }*/
-        glBindBuffer(GL_ARRAY_BUFFER, oldArrayBuffer);
-
-        std::cout << "vertex buffer: " << std::endl;
-        float* b = (float *)buffer;
-        for (size_t i = 0; i < totalSize / sizeof(float); ++i) {
-            std::cout << b[i] << '\t';
-            if ((i + 1) % 4 == 0) {
-                std::cout << std::endl;
-            }
         }
-        std::cout << std::endl;
-        
-        delete[] buffer;
+        glBindBuffer(GL_ARRAY_BUFFER, oldArrayBuffer);
     }
 
     void createIndexedRenderer(const rapidxml::xml_node<> *node)
@@ -367,37 +351,25 @@ class Mesh
 
     void createIndexBuffer()
     {
+        if (indexData.empty()) {
+            return;
+        }
+
         size_t totalSize = 0;
         for (size_t i = 0; i < indexData.size(); i++) {
             indexedRenderers[i].offset = totalSize;
             totalSize += std::get<1>(indexData[i]);
-        }
-        char *buffer = new char[totalSize];
-        for (size_t i = 0; i < indexData.size(); i++) {
-            memcpy(buffer + indexedRenderers[i].offset, std::get<0>(indexData[i]), std::get<1>(indexData[i]));
         }
 
         GLint oldElementBuffer;
         glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &oldElementBuffer);
         glGenBuffers(1, &indexBuffer);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, totalSize, buffer, GL_STATIC_DRAW);
-        /*for (size_t i = 0; i < vertexData.size(); i++) {
-            glBufferSubData(GL_ARRAY_BUFFER, indexedRenderers[i].offset, std::get<1>(indexData[i]), std::get<0>(indexData[i]));
-        }*/
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, oldElementBuffer);
-
-        std::cout << "index buffer: " << std::endl;
-        GLushort *b = (GLushort *)buffer;
-        for (size_t i = 0; i < totalSize / sizeof(GLushort); i++) {
-            std::cout << b[i] << '\t';
-            if ((i + 1) % 3 == 0) {
-                std::cout << std::endl;
-            }
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, totalSize, nullptr, GL_STATIC_DRAW);
+        for (size_t i = 0; i < vertexData.size(); i++) {
+            glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, indexedRenderers[i].offset, std::get<1>(indexData[i]), std::get<0>(indexData[i]));
         }
-        std::cout << std::endl;
-
-        delete[] buffer;
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, oldElementBuffer);
     }
 
     VertexArrayObject * createVertexArrayObject(const rapidxml::xml_node<> *node)
@@ -473,61 +445,6 @@ public:
         }
 
         createVertexArrayObjects(root);
-
-        //dumpBuffer();
-    }
-
-    void dumpBuffer()
-    {
-        size_t totalSize = 0;
-        glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-        for (std::tuple<void *, size_t, size_t> v : vertexData) {
-            totalSize += std::get<1>(v);
-        }
-        GLfloat *vb = new GLfloat[totalSize / sizeof(GLfloat)];
-        totalSize = 0;
-        for (std::tuple<void *, size_t, size_t> v : vertexData) {
-            char *target = ((char *)vb) + totalSize;
-            memcpy(target, std::get<0>(v), std::get<1>(v));
-            totalSize += std::get<1>(v);
-        }
-        //glBufferData(GL_ARRAY_BUFFER, totalSize, vb, GL_STATIC_DRAW);
-        glGetBufferSubData(GL_ARRAY_BUFFER, 0, totalSize, vb);
-        std::cout << "vertex buffer: " << totalSize << std::endl;
-        int c = 0;
-        for (size_t i = 0; i < totalSize / sizeof(GLfloat); i++) {
-            std::cout << vb[i] << '\t';
-            if (++c % 4 == 0) {
-                std::cout << std::endl;
-            }
-        }
-        std::cout << std::endl;
-
-        totalSize = 0;
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
-        for (std::tuple<void *, size_t, size_t> v : indexData) {
-            totalSize += std::get<1>(v);
-        }
-        GLushort *ib = new GLushort[totalSize / sizeof(GLushort)];
-        totalSize = 0;
-        for (std::tuple<void *, size_t, size_t> v : indexData) {
-            char *target = ((char *)ib) + totalSize;
-            memcpy(target, std::get<0>(v), std::get<1>(v));
-            totalSize += std::get<1>(v);
-        }
-        //glBufferData(GL_ELEMENT_ARRAY_BUFFER, totalSize, ib, GL_STATIC_DRAW);
-        glGetBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, totalSize, ib);
-        std::cout << "index buffer: " << totalSize << std::endl;
-        c = 0;
-        for (size_t i = 0; i < totalSize / sizeof(GLushort); i++) {
-            std::cout << ib[i] << '\t';
-            if (++c % 3 == 0) {
-                std::cout << std::endl;
-            }
-        }
-        std::cout << std::endl;
-
-        delete[] vb;
     }
 
     ~Mesh()
