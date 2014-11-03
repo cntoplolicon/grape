@@ -8,6 +8,37 @@
 #include <GL/glus.h>
 #include "rapidxml.hpp"
 
+class ModelDataBuffer
+{
+    size_t _elementSize;
+    size_t _count;
+    size_t _size;
+    void *_buffer;
+public:
+    size_t elementSize() { return _elementSize; }
+    size_t count() { return _count; }
+    size_t size() { return _size; }
+    void * buffer() { return _buffer; }
+
+    ModelDataBuffer(size_t _elementSize, size_t _count) : _elementSize(_elementSize), _count(_count), 
+        _size(_elementSize * _count), _buffer(static_cast<void *>(new char[_size])) {}
+
+    ~ModelDataBuffer()
+    {
+        if (_buffer) {
+            delete[] ((char *)_buffer);
+        }
+    }
+
+    ModelDataBuffer(const ModelDataBuffer &buf) = delete;
+    ModelDataBuffer(ModelDataBuffer &&buf) : _elementSize(buf._elementSize), _count(buf._count),
+        _size(buf._size), _buffer(buf._buffer)
+    {
+        buf._elementSize = buf._size = buf._count = 0;
+        buf._buffer = nullptr;
+    }
+};
+
 class AttributeType
 {
 public:
@@ -18,7 +49,7 @@ public:
     const bool normalized;
     const GLenum glType;
 
-    virtual std::tuple<void *, size_t, size_t> parse(const std::string &input) const = 0;
+    virtual ModelDataBuffer parse(const std::string &input) const = 0;
 };
 
 template <typename T>
@@ -29,7 +60,7 @@ public:
         AttributeType(typeName, normalized, glType) {}
 
     typedef T ValueType;
-    virtual std::tuple<void *, size_t, size_t> parse(const std::string &input) const
+    virtual ModelDataBuffer parse(const std::string &input) const
     {
         std::stringstream inputStream(input, std::ios_base::in);
         inputStream.exceptions(std::stringstream::badbit);
@@ -39,10 +70,9 @@ public:
             values.push_back(temp);
         }
 
-        size_t bufferSize = sizeof(ValueType) * values.size();
-        ValueType *ret = (ValueType *)malloc(bufferSize);
-        std::copy(values.begin(), values.end(), ret);
-        return std::tuple<void *, size_t, size_t>(static_cast<void *>(ret), bufferSize, values.size());
+        ModelDataBuffer buffer(sizeof(ValueType), values.size());
+        std::copy(values.begin(), values.end(), static_cast<ValueType *>(buffer.buffer()));
+        return buffer;
     }
 };
 
@@ -62,11 +92,24 @@ public:
 class VertexArrayObject
 {
     GLuint object;
+    std::string _name;
+    
 public:
-    const std::string name;
+    std::string name() const
+    {
+        return _name;
+    }
+
+    VertexArrayObject(const VertexArrayObject &vao) = delete;
+
+    VertexArrayObject(VertexArrayObject &&vao)
+    {
+        object = vao.object;
+        vao.object = 0;
+    }
 
     VertexArrayObject(const std::string &_name, const std::vector<Attribute> &attributes, 
-            GLuint arrayBuffer, GLuint elementBuffer) : name(_name)
+            GLuint arrayBuffer, GLuint elementBuffer) : _name(_name)
     {
         GLint oldArrayBuffer, oldElementBuffer;
         glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &oldArrayBuffer);
@@ -91,7 +134,9 @@ public:
 
     ~VertexArrayObject()
     {
-        glDeleteVertexArrays(1, &object);
+        if (object != 0) {
+            glDeleteVertexArrays(1, &object);
+        }
     }
 
     void bind() const
@@ -234,14 +279,13 @@ const PrimitiveType * MeshTypeUtil::getPrimitiveType(const std::string &name)
 
 class Mesh
 {
-    std::vector<std::tuple<void *, size_t, size_t>> vertexData;
-    std::vector<std::tuple<void *, size_t, size_t>> indexData;
+    std::vector<ModelDataBuffer> vertexData;
+    std::vector<ModelDataBuffer> indexData;
 
     std::vector<Attribute> attributes;
     std::vector<IndexedRender> indexedRenderers;
     std::vector<ArrayRenderer> arrayRenderers;
-    VertexArrayObject **vertexArrayObjects;
-    int vaoCount = 0;
+    std::vector<VertexArrayObject> vertexArrayObjects;
 
     GLuint vertexBuffer;
     GLuint indexBuffer;
@@ -281,7 +325,7 @@ class Mesh
         size_t totalSize = 0;
         for (size_t i = 0; i < vertexData.size(); i++) {
             attributes[i].offset = totalSize;
-            totalSize += std::get<1>(vertexData[i]);
+            totalSize += vertexData[i].size();
         }
 
         GLint oldArrayBuffer;
@@ -290,7 +334,7 @@ class Mesh
         glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
         glBufferData(GL_ARRAY_BUFFER, totalSize, nullptr, GL_STATIC_DRAW);
         for (size_t i = 0; i < vertexData.size(); i++) {
-            glBufferSubData(GL_ARRAY_BUFFER, attributes[i].offset, std::get<1>(vertexData[i]), std::get<0>(vertexData[i]));
+            glBufferSubData(GL_ARRAY_BUFFER, attributes[i].offset, vertexData[i].size(), vertexData[i].buffer());
         }
         glBindBuffer(GL_ARRAY_BUFFER, oldArrayBuffer);
     }
@@ -317,9 +361,8 @@ class Mesh
             throw std::runtime_error("unkown data type for indices: " + dataTypeName);
         }
 
-        std::tuple<void *, size_t, size_t> v = dataType->parse(node->value());
-        indexData.push_back(v);
-        indexedRenderers.push_back(IndexedRender(primitiveType->glType, dataType->glType,  std::get<2>(v)));
+        indexData.push_back(dataType->parse(node->value()));
+        indexedRenderers.push_back(IndexedRender(primitiveType->glType, dataType->glType, indexData[indexData.size() - 1].count()));
     }
 
     void createArrayRenderer(const rapidxml::xml_node<> *node)
@@ -358,7 +401,7 @@ class Mesh
         size_t totalSize = 0;
         for (size_t i = 0; i < indexData.size(); i++) {
             indexedRenderers[i].offset = totalSize;
-            totalSize += std::get<1>(indexData[i]);
+            totalSize += indexData[i].size();
         }
 
         GLint oldElementBuffer;
@@ -367,12 +410,12 @@ class Mesh
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, totalSize, nullptr, GL_STATIC_DRAW);
         for (size_t i = 0; i < vertexData.size(); i++) {
-            glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, indexedRenderers[i].offset, std::get<1>(indexData[i]), std::get<0>(indexData[i]));
+            glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, indexedRenderers[i].offset, indexData[i].size(), indexData[i].buffer());
         }
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, oldElementBuffer);
     }
 
-    VertexArrayObject * createVertexArrayObject(const rapidxml::xml_node<> *node)
+    VertexArrayObject createVertexArrayObject(const rapidxml::xml_node<> *node)
     {
         rapidxml::xml_attribute<> *nameAttr = node->first_attribute("name");
         if (!nameAttr) {
@@ -395,7 +438,7 @@ class Mesh
         if (attrsForVao.empty()) {
             throw new std::runtime_error("no attribute source specified for vao");
         }
-        return new VertexArrayObject(name, attrsForVao, vertexBuffer, indexBuffer);
+        return VertexArrayObject(name, attrsForVao, vertexBuffer, indexBuffer);
     }
 
     void createVertexArrayObjects(const rapidxml::xml_node<> *root)
@@ -406,11 +449,9 @@ class Mesh
             nodes.push_back(node);
         }
 
-        vaoCount = nodes.size() + 1;
-        vertexArrayObjects = new VertexArrayObject*[vaoCount];
-        vertexArrayObjects[0] = new VertexArrayObject("", attributes, vertexBuffer, indexBuffer);
+        vertexArrayObjects.push_back(VertexArrayObject("", attributes, vertexBuffer, indexBuffer));
         for (size_t i = 0; i < nodes.size(); i++) {
-            vertexArrayObjects[i + 1] = createVertexArrayObject(nodes[i]);
+            vertexArrayObjects.push_back(createVertexArrayObject(nodes[i]));
         }
     }
 
@@ -451,23 +492,11 @@ public:
     {
         glDeleteBuffers(1, &indexBuffer);
         glDeleteBuffers(1, &vertexBuffer);
-
-        for (std::tuple<void *, size_t, size_t> v : vertexData) {
-            free(std::get<0>(v));
-        }
-        for (std::tuple<void *, size_t, size_t> v : indexData) {
-            free(std::get<0>(v));
-        }
-
-        for (int i = 0; i < vaoCount; i++) {
-            delete vertexArrayObjects[i];
-        }
-        delete[] vertexArrayObjects;
     }
 
     void render()
     {
-        VertexArrayObjectBinder binder(vertexArrayObjects[0]);
+        VertexArrayObjectBinder binder(&vertexArrayObjects[0]);
         std::for_each(indexedRenderers.begin(), indexedRenderers.end(), std::mem_fn(&IndexedRender::render));
         std::for_each(arrayRenderers.begin(), arrayRenderers.end(), std::mem_fn(&ArrayRenderer::render));
     }
@@ -475,7 +504,8 @@ public:
     void render(const std::string &name)
     {
         const VertexArrayObject *v = nullptr;
-        std::for_each(vertexArrayObjects, vertexArrayObjects + vaoCount, [&] (const VertexArrayObject *vao) { if (vao->name == name) { v = vao; }});
+        std::for_each(vertexArrayObjects.begin(), vertexArrayObjects.end(), 
+                [&] (const VertexArrayObject &vao) { if (vao.name() == name) { v = &vao; }});
         if (v == nullptr) {
             throw std::runtime_error("unknown vao name: " + name);
         }

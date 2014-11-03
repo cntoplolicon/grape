@@ -51,7 +51,7 @@ void initProgram()
 
 void initMesh()
 {
-    mesh = new Mesh("./model/Test.xml");
+    mesh = new Mesh("./model/Ship.xml");
 }
 
 GLUSboolean init()
