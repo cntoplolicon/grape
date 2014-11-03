@@ -1,20 +1,36 @@
 #include <iostream>
+#include <cmath>
 #include "GL/glus.h"
 #include "mesh.hpp"
 
-const float zNear = 1.0f, zFar = 20.0f, fov = 60.0f;
+const float zNear = 1.0f, zFar = 40.0f, fov = 60.0f;
 
 GLUSprogram program;
 
 GLuint modelLocation;
 GLuint viewLocation;
 GLuint projectionLocation;
-Mesh* mesh;
-
 
 GLuint vertexArray;
 GLuint vertexBuffer;
 GLuint indexBuffer;
+
+Mesh* mesh;
+float theta = 90.0f;
+float r = 20.0f;
+float phi = 0.0f;
+
+void updateCamera()
+{
+    float _theta = theta * M_PI / 180.0f, _phi = phi * M_PI / 180.0f;
+    float x = r * sin(_theta) * cos(_phi);
+    float y = r * sin(_theta) * sin(_phi);
+    float z = r * cos(_theta);
+
+    GLfloat view[16] = {0.0f};
+    glusMatrix4x4LookAtf(view, x, y, z, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f);
+    glUniformMatrix4fv(viewLocation, 1, GL_FALSE, view);
+}
 
 void initProgram()
 {
@@ -38,9 +54,7 @@ void initProgram()
     glusMatrix4x4Identityf(model);
     glUniformMatrix4fv(modelLocation, 1, GL_FALSE, model);
 
-    GLfloat view[16];
-    glusMatrix4x4LookAtf(view, 0.0f, 0.0f, -10.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.1f, 0.0f);
-    glUniformMatrix4fv(viewLocation, 1, GL_FALSE, view);
+    updateCamera();
 
     GLfloat projection[16];
     glusMatrix4x4Perspectivef(projection, fov, 1.0f, zNear, zFar);
@@ -80,7 +94,7 @@ GLUSboolean update(GLUSfloat time)
     return GLUS_TRUE;
 }
 
-void reshape (GLUSint width, GLUSint height)
+void reshape(GLUSint width, GLUSint height)
 {
     GLfloat projection[16];
     glusMatrix4x4Perspectivef(projection, fov, (GLfloat)width / (GLfloat)height, zNear, zFar);
@@ -90,6 +104,46 @@ void reshape (GLUSint width, GLUSint height)
     glUseProgram(0);
 
     glViewport(0, 0, width, height);
+}
+
+void key(GLUSboolean pressed, GLUSint key)
+{
+    float deltaPhi = 5.0f;
+    float deltaTheta = 2.5f;
+    float deltaR = 1.0f;
+    if (!pressed) {
+        return;
+    }
+    switch (key) {
+        case 'a':
+            phi -= deltaPhi;
+            break;
+        case 'd':
+            phi += deltaPhi;
+            break;
+        case 's':
+            theta += deltaTheta;
+            break;
+        case 'w':
+            theta -= deltaTheta;
+            break;
+        case 'q':
+            r -= deltaR;
+            break;
+        case 'e':
+            r += deltaR;
+            break;
+        default:
+            break;
+    }
+
+    r = std::max(5.0f, std::min(30.0f, r));
+    // to makesure the up vector not paralled with the eye line
+    theta = std::max(1.0f, std::min(179.0f, theta));
+
+    glUseProgram(program.program);
+    updateCamera();
+    glUseProgram(0);
 }
 
 GLUSvoid terminate(GLUSvoid)
@@ -124,6 +178,7 @@ int main(int argc, char* argv[])
     glusWindowSetReshapeFunc(reshape);
     glusWindowSetUpdateFunc(update);
     glusWindowSetTerminateFunc(terminate);
+    glusWindowSetKeyFunc(key);
 
     if (!glusWindowCreate("Main Window", 480, 480, GLUS_FALSE, GLUS_FALSE, eglConfigAttributes, eglContextAttributes)) {
         return -1;
