@@ -11,10 +11,6 @@ GLuint modelLocation;
 GLuint viewLocation;
 GLuint projectionLocation;
 
-GLuint vertexArray;
-GLuint vertexBuffer;
-GLuint indexBuffer;
-
 Mesh* mesh;
 float theta = 90.0f;
 float r = 20.0f;

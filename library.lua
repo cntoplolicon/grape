@@ -30,6 +30,7 @@ function setup_project(proj, ...)
 
         configuration "macosx"
             linkoptions {"-framework OpenGL"}
+            defines {"MACOSX"}
             libdirs {"../lib/osx"}
 
         configuration {"gmake"}

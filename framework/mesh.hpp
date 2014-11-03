@@ -1,3 +1,6 @@
+#ifndef __MESH_HPP__
+#define __MESH_HPP__
+
 #include <iostream>
 #include <algorithm>
 #include <iterator>
@@ -26,7 +29,7 @@ public:
     ~ModelDataBuffer()
     {
         if (_buffer) {
-            delete[] ((char *)_buffer);
+            delete[] (static_cast<char *>(_buffer));
         }
     }
 
@@ -102,9 +105,8 @@ public:
 
     VertexArrayObject(const VertexArrayObject &vao) = delete;
 
-    VertexArrayObject(VertexArrayObject &&vao)
+    VertexArrayObject(VertexArrayObject &&vao) : object(vao.object), _name(vao._name)
     {
-        object = vao.object;
         vao.object = 0;
     }
 
@@ -287,8 +289,8 @@ class Mesh
     std::vector<ArrayRenderer> arrayRenderers;
     std::vector<VertexArrayObject> vertexArrayObjects;
 
-    GLuint vertexBuffer;
-    GLuint indexBuffer;
+    GLuint vertexBuffer = 0;
+    GLuint indexBuffer = 0;
 
     void createAttribute(rapidxml::xml_node<> *node)
     {
@@ -322,6 +324,10 @@ class Mesh
 
     void createVertexBuffer()
     {
+        if (vertexData.empty()) {
+            return;
+        }
+
         size_t totalSize = 0;
         for (size_t i = 0; i < vertexData.size(); i++) {
             attributes[i].offset = totalSize;
@@ -515,3 +521,4 @@ public:
     }
 };
 
+#endif
