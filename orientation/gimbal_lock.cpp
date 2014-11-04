@@ -10,9 +10,9 @@ GLuint baseColorLocation;
 
 enum GimbalAxis
 {
-	GIMBAL_X_AXIS,
-	GIMBAL_Y_AXIS,
-	GIMBAL_Z_AXIS,
+    GIMBAL_X_AXIS,
+    GIMBAL_Y_AXIS,
+    GIMBAL_Z_AXIS,
 };
 
 void initProgram()
@@ -46,41 +46,41 @@ void initProgram()
 
 Mesh *gimbals[3] = {nullptr};
 const char *g_strGimbalNames[3] = {
-	"./model/LargeGimbal.xml",
-	"./model/MediumGimbal.xml",
-	"./model/SmallGimbal.xml",
+    "./model/LargeGimbal.xml",
+    "./model/MediumGimbal.xml",
+    "./model/SmallGimbal.xml"
 };
 
 bool g_bDrawGimbals = true;
 
 void DrawGimbal(const GLfloat *currMatrix, GimbalAxis eAxis, const GLfloat *baseColor)
 {
-	if(!g_bDrawGimbals) {
-		return;
+    if(!g_bDrawGimbals) {
+        return;
     }
 
     GLfloat matrix[16];
     memcpy(matrix, currMatrix, sizeof(matrix));
 
-	switch(eAxis) {
-	case GIMBAL_X_AXIS:
-		break;
-	case GIMBAL_Y_AXIS:
+    switch(eAxis) {
+    case GIMBAL_X_AXIS:
+        break;
+    case GIMBAL_Y_AXIS:
         glusMatrix4x4RotateRzf(matrix, 90.0f);
         glusMatrix4x4RotateRxf(matrix, 90.0f);
-		break;
-	case GIMBAL_Z_AXIS:
+        break;
+    case GIMBAL_Z_AXIS:
         glusMatrix4x4RotateRyf(matrix, 90.0f);
         glusMatrix4x4RotateRxf(matrix, 90.0f);
-		break;
-	}
+        break;
+    }
 
-	glUseProgram(program.program);
-	glUniform4fv(baseColorLocation, 1, baseColor);
-	glUniformMatrix4fv(modelViewLocation, 1, GL_FALSE, matrix);
-	gimbals[eAxis]->render();
+    glUseProgram(program.program);
+    glUniform4fv(baseColorLocation, 1, baseColor);
+    glUniformMatrix4fv(modelViewLocation, 1, GL_FALSE, matrix);
+    gimbals[eAxis]->render();
 
-	glUseProgram(0);
+    glUseProgram(0);
 }
 
 Mesh *ship;
@@ -96,59 +96,61 @@ GLUSboolean init()
 
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
-	glFrontFace(GL_CW);
+    glFrontFace(GL_CW);
 
-	glEnable(GL_DEPTH_TEST);
-	glDepthMask(GL_TRUE);
-	glDepthFunc(GL_LEQUAL);
-	glDepthRange(0.0f, 1.0f);
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LEQUAL);
+    glDepthRange(0.0f, 1.0f);
 
     return GLUS_TRUE;
 }
 
 struct GimbalAngles
 {
-	GimbalAngles()
-		: fAngleX(0.0f)
-		, fAngleY(0.0f)
-		, fAngleZ(0.0f)
-	{}
+    GimbalAngles()
+        : fAngleX(0.0f)
+          , fAngleY(0.0f)
+          , fAngleZ(0.0f)
+    {}
 
-	float fAngleX;
-	float fAngleY;
-	float fAngleZ;
+    float fAngleX;
+    float fAngleY;
+    float fAngleZ;
 };
 
 GimbalAngles g_angles;
 
 GLUSboolean update(GLUSfloat time)
 {
-	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-	glClearDepth(1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClearDepth(1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    GLfloat currMatrix[16] = {0.0f};
-    glusMatrix4x4Translatef(currMatrix, 0.0f, 0.0f, -200.0f);
-    glusMatrix4x4RotateRxf(currMatrix, g_angles.fAngleX);
+    GLfloat matrix[16] = {0.0f};
+
+    glusMatrix4x4Identityf(matrix);
+    glusMatrix4x4Translatef(matrix, 0.0f, 0.0f, -200.0f);
+    glusMatrix4x4RotateRxf(matrix, g_angles.fAngleX);
     GLfloat c0[] = {0.4f, 0.4f, 1.0f, 1.0f};
-	DrawGimbal(currMatrix, GIMBAL_X_AXIS, c0);
-    glusMatrix4x4RotateRyf(currMatrix, g_angles.fAngleY);
+    DrawGimbal(matrix, GIMBAL_X_AXIS, c0);
+    glusMatrix4x4RotateRyf(matrix, g_angles.fAngleY);
     GLfloat c1[] = {0.0f, 1.0f, 0.0f, 1.0f};
-	DrawGimbal(currMatrix, GIMBAL_Y_AXIS, c1);
-    glusMatrix4x4RotateRzf(currMatrix, g_angles.fAngleZ);
+    DrawGimbal(matrix, GIMBAL_Y_AXIS, c1);
+    glusMatrix4x4RotateRzf(matrix, g_angles.fAngleZ);
     GLfloat c2[] = {1.0f, 0.3f, 0.3f, 1.0f};
-	DrawGimbal(currMatrix, GIMBAL_Z_AXIS, c2);
+    DrawGimbal(matrix, GIMBAL_Z_AXIS, c2);
 
-	glUseProgram(program.program);
+    glUseProgram(program.program);
 
-    glusMatrix4x4Scalef(currMatrix, 3.0f, 3.0f, 3.0f);
-    glusMatrix4x4RotateRxf(currMatrix, -90.0f);
-	glUniform4f(baseColorLocation, 1.0, 1.0, 1.0, 1.0);
-	glUniformMatrix4fv(modelViewLocation, 1, GL_FALSE, currMatrix);
+    glusMatrix4x4Scalef(matrix, 3.0f, 3.0f, 3.0f);
+    glusMatrix4x4RotateRxf(matrix, -90.0f);
+    glUniform4f(baseColorLocation, 1.0, 1.0, 1.0, 1.0);
+    glUniformMatrix4fv(modelViewLocation, 1, GL_FALSE, matrix);
 
-	ship->render("tint");
+    ship->render("tint");
 
-	glUseProgram(0);
+    glUseProgram(0);
 
     return GLUS_TRUE;
 }
@@ -172,20 +174,20 @@ void key(GLUSboolean pressed, GLUSint key)
     if (!pressed) {
         return;
     }
-	switch (key) {
-	case 'w': g_angles.fAngleX += SMALL_ANGLE_INCREMENT; break;
-	case 's': g_angles.fAngleX -= SMALL_ANGLE_INCREMENT; break;
+    switch (key) {
+        case 'w': g_angles.fAngleX += SMALL_ANGLE_INCREMENT; break;
+        case 's': g_angles.fAngleX -= SMALL_ANGLE_INCREMENT; break;
 
-	case 'a': g_angles.fAngleY += SMALL_ANGLE_INCREMENT; break;
-	case 'd': g_angles.fAngleY -= SMALL_ANGLE_INCREMENT; break;
+        case 'a': g_angles.fAngleY += SMALL_ANGLE_INCREMENT; break;
+        case 'd': g_angles.fAngleY -= SMALL_ANGLE_INCREMENT; break;
 
-	case 'q': g_angles.fAngleZ += SMALL_ANGLE_INCREMENT; break;
-	case 'e': g_angles.fAngleZ -= SMALL_ANGLE_INCREMENT; break;
+        case 'q': g_angles.fAngleZ += SMALL_ANGLE_INCREMENT; break;
+        case 'e': g_angles.fAngleZ -= SMALL_ANGLE_INCREMENT; break;
 
-	case 32:
-		g_bDrawGimbals = !g_bDrawGimbals;
-		break;
-	}
+        case 32:
+                  g_bDrawGimbals = !g_bDrawGimbals;
+                  break;
+    }
 }
 
 GLUSvoid terminate(GLUSvoid)
