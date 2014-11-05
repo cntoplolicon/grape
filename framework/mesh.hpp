@@ -113,10 +113,6 @@ public:
     VertexArrayObject(const std::string &_name, const std::vector<Attribute> &attributes, 
             GLuint arrayBuffer, GLuint elementBuffer) : _name(_name)
     {
-        GLint oldArrayBuffer, oldElementBuffer;
-        glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &oldArrayBuffer);
-        glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &oldElementBuffer);
-
         glGenVertexArrays(1, &object);
         glBindVertexArray(object);
 
@@ -130,8 +126,8 @@ public:
         }
 
         glBindVertexArray(0);
-        glBindBuffer(GL_ARRAY_BUFFER, oldArrayBuffer);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, oldElementBuffer);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
 
     ~VertexArrayObject()
@@ -149,17 +145,15 @@ public:
 
 class VertexArrayObjectBinder
 {
-    GLint bindingVertexArray;
 public:
     VertexArrayObjectBinder(const VertexArrayObject *vao)
     {
-        glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &bindingVertexArray);
         vao->bind();
     }
 
     ~VertexArrayObjectBinder()
     {
-        glBindVertexArray(bindingVertexArray);
+        glBindVertexArray(0);
     }
 };
 
@@ -334,15 +328,13 @@ class Mesh
             totalSize += vertexData[i].size();
         }
 
-        GLint oldArrayBuffer;
-        glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &oldArrayBuffer);
         glGenBuffers(1, &vertexBuffer);
         glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
         glBufferData(GL_ARRAY_BUFFER, totalSize, nullptr, GL_STATIC_DRAW);
         for (size_t i = 0; i < vertexData.size(); i++) {
             glBufferSubData(GL_ARRAY_BUFFER, attributes[i].offset, vertexData[i].size(), vertexData[i].buffer());
         }
-        glBindBuffer(GL_ARRAY_BUFFER, oldArrayBuffer);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
     }
 
     void createIndexedRenderer(const rapidxml::xml_node<> *node)
@@ -410,15 +402,13 @@ class Mesh
             totalSize += indexData[i].size();
         }
 
-        GLint oldElementBuffer;
-        glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &oldElementBuffer);
         glGenBuffers(1, &indexBuffer);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, totalSize, nullptr, GL_STATIC_DRAW);
         for (size_t i = 0; i < indexData.size(); i++) {
             glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, indexedRenderers[i].offset, indexData[i].size(), indexData[i].buffer());
         }
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, oldElementBuffer);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
 
     VertexArrayObject createVertexArrayObject(const rapidxml::xml_node<> *node)
