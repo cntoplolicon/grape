@@ -32,6 +32,7 @@ function setup_project(proj, ...)
             linkoptions {"-framework OpenGL"}
             defines {"MACOSX"}
             libdirs {"../lib/osx"}
+            libdirs {"/usr/lib/nvidia-331"}
 
         configuration {"gmake"}
             buildoptions {"-std=c++11" }

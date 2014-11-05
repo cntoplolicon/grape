@@ -415,7 +415,7 @@ class Mesh
         glGenBuffers(1, &indexBuffer);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, totalSize, nullptr, GL_STATIC_DRAW);
-        for (size_t i = 0; i < vertexData.size(); i++) {
+        for (size_t i = 0; i < indexData.size(); i++) {
             glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, indexedRenderers[i].offset, indexData[i].size(), indexData[i].buffer());
         }
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, oldElementBuffer);
