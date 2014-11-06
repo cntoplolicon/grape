@@ -64,6 +64,8 @@ flags = [
 '-I',
 './include/GLUS',
 '-I',
+'./include',
+'-I',
 './framework',
 '-isystem',
 '/usr/include',
