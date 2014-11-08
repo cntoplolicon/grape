@@ -14,8 +14,8 @@ struct ProgramData
 	GLuint dirToLightUnif;
 	GLuint lightIntensityUnif;
 
-	GLuint modelToCameraMatrixUnif;
-	GLuint normalModelToCameraMatrixUnif;
+	GLuint modelViewUnif;
+	GLuint modelViewForNormalUnif;
 };
 
 float g_fzNear = 1.0f;
@@ -42,8 +42,8 @@ ProgramData LoadProgram(const std::string &strVertexShader, const std::string &s
 
 	ProgramData data;
 	data.theProgram = program.program;
-	data.modelToCameraMatrixUnif = glGetUniformLocation(data.theProgram, "modelToCameraMatrix");
-	data.normalModelToCameraMatrixUnif = glGetUniformLocation(data.theProgram, "normalModelToCameraMatrix");
+	data.modelViewUnif = glGetUniformLocation(data.theProgram, "modelViewMatrix");
+	data.modelViewForNormalUnif = glGetUniformLocation(data.theProgram, "modelViewMatrixForNormal");
 	data.dirToLightUnif = glGetUniformLocation(data.theProgram, "dirToLight");
 	data.lightIntensityUnif = glGetUniformLocation(data.theProgram, "lightIntensity");
 
@@ -55,8 +55,8 @@ ProgramData LoadProgram(const std::string &strVertexShader, const std::string &s
 
 void InitializeProgram()
 {
-	g_WhiteDiffuseColor = LoadProgram("./ambient_white.glsl", "./fragment.glsl");
-	g_VertexDiffuseColor = LoadProgram("./ambient_color.glsl", "./fragment.glsl");
+	g_WhiteDiffuseColor = LoadProgram("./diffuse_white.glsl", "./fragment.glsl");
+	g_VertexDiffuseColor = LoadProgram("./diffuse_color.glsl", "./fragment.glsl");
 }
 
 Mesh *g_pCylinderMesh = NULL;
@@ -161,8 +161,6 @@ GLUSboolean display(GLUSfloat time)
 	glClearDepth(1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	if(g_pPlaneMesh && g_pCylinderMesh)
-	{
 		glutil::MatrixStack modelMatrix;
 		modelMatrix.SetMatrix(g_viewPole.CalcMatrix());
 
@@ -182,9 +180,9 @@ GLUSboolean display(GLUSfloat time)
 				glutil::PushStack push(modelMatrix);
 
 				glUseProgram(g_WhiteDiffuseColor.theProgram);
-				glUniformMatrix4fv(g_WhiteDiffuseColor.modelToCameraMatrixUnif, 1, GL_FALSE, glm::value_ptr(modelMatrix.Top()));
+				glUniformMatrix4fv(g_WhiteDiffuseColor.modelViewUnif, 1, GL_FALSE, glm::value_ptr(modelMatrix.Top()));
 				glm::mat3 normMatrix(modelMatrix.Top());
-				glUniformMatrix3fv(g_WhiteDiffuseColor.normalModelToCameraMatrixUnif, 1, GL_FALSE, glm::value_ptr(normMatrix));
+				glUniformMatrix3fv(g_WhiteDiffuseColor.modelViewForNormalUnif, 1, GL_FALSE, glm::value_ptr(normMatrix));
 				glUniform4f(g_WhiteDiffuseColor.lightIntensityUnif, 1.0f, 1.0f, 1.0f, 1.0f);
 				g_pPlaneMesh->render();
 				glUseProgram(0);
@@ -199,25 +197,24 @@ GLUSboolean display(GLUSfloat time)
 				if(g_bDrawColoredCyl)
 				{
 					glUseProgram(g_VertexDiffuseColor.theProgram);
-					glUniformMatrix4fv(g_VertexDiffuseColor.modelToCameraMatrixUnif, 1, GL_FALSE, glm::value_ptr(modelMatrix.Top()));
+					glUniformMatrix4fv(g_VertexDiffuseColor.modelViewUnif, 1, GL_FALSE, glm::value_ptr(modelMatrix.Top()));
 					glm::mat3 normMatrix(modelMatrix.Top());
-					glUniformMatrix3fv(g_VertexDiffuseColor.normalModelToCameraMatrixUnif, 1, GL_FALSE, glm::value_ptr(normMatrix));
+					glUniformMatrix3fv(g_VertexDiffuseColor.modelViewForNormalUnif, 1, GL_FALSE, glm::value_ptr(normMatrix));
 					glUniform4f(g_VertexDiffuseColor.lightIntensityUnif, 1.0f, 1.0f, 1.0f, 1.0f);
 					g_pCylinderMesh->render("lit-color");
 				}
 				else
 				{
 					glUseProgram(g_WhiteDiffuseColor.theProgram);
-					glUniformMatrix4fv(g_WhiteDiffuseColor.modelToCameraMatrixUnif, 1, GL_FALSE, glm::value_ptr(modelMatrix.Top()));
+					glUniformMatrix4fv(g_WhiteDiffuseColor.modelViewUnif, 1, GL_FALSE, glm::value_ptr(modelMatrix.Top()));
 					glm::mat3 normMatrix(modelMatrix.Top());
-					glUniformMatrix3fv(g_WhiteDiffuseColor.normalModelToCameraMatrixUnif, 1, GL_FALSE, glm::value_ptr(normMatrix));
+					glUniformMatrix3fv(g_WhiteDiffuseColor.modelViewForNormalUnif, 1, GL_FALSE, glm::value_ptr(normMatrix));
 					glUniform4f(g_WhiteDiffuseColor.lightIntensityUnif, 1.0f, 1.0f, 1.0f, 1.0f);
 					g_pCylinderMesh->render("lit");
 				}
 				glUseProgram(0);
 			}
 		}
-	}
 
     return GLUS_TRUE;
 }
