@@ -7,17 +7,21 @@ smooth in vec4 interpDiffuseColor;
 uniform vec3 lightPos;
 uniform vec4 lightIntensity;
 uniform vec4 ambientIntensity;
+uniform float lightAttenuation;
 
 out vec4 outputColor;
 
 void main()
 {
-    vec3 dirToLight = normalize(lightPos - vec3(cameraSpacePosition));
+    vec3 lightDiff = lightPos - vec3(cameraSpacePosition);
+    float lightDistSqr = dot(lightDiff, lightDiff);
+    vec3 dirToLight = lightDiff / inversesqrt(lightDistSqr);
+    float lightFactor = 1.0 / (1.0 + lightDistSqr * lightAttenuation);
 	
 	float cosAngIncidence = dot(cameraSpaceNormal, dirToLight);
 	cosAngIncidence = clamp(cosAngIncidence, 0, 1);
 	
-	outputColor = interpDiffuseColor * lightIntensity * cosAngIncidence +
+	outputColor = lightFactor * lightIntensity * interpDiffuseColor * cosAngIncidence +
 		interpDiffuseColor * ambientIntensity;
 }
 

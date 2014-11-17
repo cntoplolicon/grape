@@ -13,6 +13,7 @@ struct ProgramData
     GLuint lightPosUnif;
     GLuint lightIntensityUnif;
     GLuint ambientIntensityUnif;
+    GLuint lightAttenuationUnif;
 
     GLuint modelViewUnif;
     GLuint modelViewForNormalUnif;
@@ -73,6 +74,7 @@ ProgramData loadLitProgram(const std::string &vertShaderFile, const std::string 
     data.lightPosUnif = glGetUniformLocation(data.program, "lightPos");
     data.lightIntensityUnif = glGetUniformLocation(data.program, "lightIntensity");
     data.ambientIntensityUnif = glGetUniformLocation(data.program, "ambientIntensity");
+    data.lightAttenuationUnif = glGetUniformLocation(data.program, "lightAttenuation");
 
     GLuint projectionBlock = glGetUniformBlockIndex(data.program, "Projection");
     glUniformBlockBinding(data.program, projectionBlock, g_projectionBlockIndex);
@@ -141,6 +143,8 @@ struct ProjectionBlock
 {
     glm::mat4 cameraToClipMatrix;
 };
+
+float g_fLightAttenuation = 1.0f;
 
 GLUSboolean init()
 {
@@ -218,9 +222,11 @@ GLUSboolean display(GLUSfloat time)
     glUseProgram(g_WhiteDiffuseColor.program);
     glUniform4f(g_WhiteDiffuseColor.lightIntensityUnif, 0.8f, 0.8f, 0.8f, 1.0f);
     glUniform4f(g_WhiteDiffuseColor.ambientIntensityUnif, 0.2f, 0.2f, 0.2f, 1.0f);
+    glUniform1f(g_WhiteDiffuseColor.lightAttenuationUnif, g_fLightAttenuation);
     glUseProgram(g_VertexDiffuseColor.program);
     glUniform4f(g_VertexDiffuseColor.lightIntensityUnif, 0.8f, 0.8f, 0.8f, 1.0f);
     glUniform4f(g_VertexDiffuseColor.ambientIntensityUnif, 0.2f, 0.2f, 0.2f, 1.0f);
+    glUniform1f(g_VertexDiffuseColor.lightAttenuationUnif, g_fLightAttenuation);
     glUseProgram(0);
 
     {
@@ -327,12 +333,22 @@ void keyboard(const GLUSboolean pressed, const GLUSint key)
         case 'L': g_fLightRadius += 0.05f; break;
         case 'J': g_fLightRadius -= 0.05f; break;
 
+        case 'o': g_fLightAttenuation *= 1.5f; break;
+        case 'u': g_fLightAttenuation /= 1.5f; break;
+        case 'O': g_fLightAttenuation *= 1.1f; break;
+        case 'U': g_fLightAttenuation /= 1.1f; break;
+
+
         case 'y': g_bDrawLight = !g_bDrawLight; break;
         case 'b': g_LightTimer.TogglePause(); break;
     }
 
     if(g_fLightRadius < 0.2f) {
         g_fLightRadius = 0.2f;
+    }
+
+    if(g_fLightAttenuation < 0.1f) {
+        g_fLightAttenuation = 0.1f;
     }
 }
 
