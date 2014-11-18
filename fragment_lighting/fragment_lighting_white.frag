@@ -14,7 +14,7 @@ void main()
 {
     vec3 lightDiff = lightPos - vec3(cameraSpacePosition);
     float lightDistSqr = dot(lightDiff, lightDiff);
-    vec3 dirToLight = lightDiff / inversesqrt(lightDistSqr);
+    vec3 dirToLight = lightDiff * inversesqrt(lightDistSqr);
     float lightFactor = 1.0 / (1.0 + lightDistSqr * lightAttenuation);
 	
     vec3 surfaceNormal = normalize(cameraSpaceNormal);

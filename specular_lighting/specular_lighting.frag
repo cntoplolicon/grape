@@ -18,10 +18,10 @@ void main()
 { 
     vec3 lightDiff = cameraSpaceLightPos - vec3(cameraSpacePosition);
     float lightDistSqr = dot(lightDiff, lightDiff);
-    vec3 lightDir = lightDiff / inversesqrt(lightDistSqr);
+    vec3 lightDir = lightDiff * inversesqrt(lightDistSqr);
     float attenuationFactor = 1.0 / (1.0 + lightDistSqr * lightAttenuation);
     
-	vec3 surfaceNormal = normalize(vertexNormal);
+    vec3 surfaceNormal = normalize(vertexNormal);
     float cosAngIncidence = dot(surfaceNormal, lightDir);
     cosAngIncidence = clamp(cosAngIncidence, 0, 1);
     
@@ -33,8 +33,9 @@ void main()
     gaussianTerm = cosAngIncidence == 0.0 ? 0.0 : gaussianTerm;
 
     vec4 color = attenuationFactor * lightIntensity * diffuseColor * cosAngIncidence +
-        diffuseColor * ambientIntensity + 
-        gaussianTerm * specularColor * attenuationFactor;
+        ambientIntensity * diffuseColor + 
+        gaussianTerm * specularColor * attenuationFactor * lightIntensity;
+
     vec4 gamma = vec4(1.0 / 2.2);
     gamma.w = 1.0;
     outputColor = pow(color, gamma);
