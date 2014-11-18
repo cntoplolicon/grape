@@ -32,8 +32,11 @@ void main()
     float gaussianTerm = exp(-(exponent * exponent));
     gaussianTerm = cosAngIncidence == 0.0 ? 0.0 : gaussianTerm;
 
-    outputColor = attenuationFactor * lightIntensity * diffuseColor * cosAngIncidence +
+    vec4 color = attenuationFactor * lightIntensity * diffuseColor * cosAngIncidence +
         diffuseColor * ambientIntensity + 
         gaussianTerm * specularColor * attenuationFactor;
+    vec4 gamma = vec4(1.0 / 2.2);
+    gamma.w = 1.0;
+    outputColor = pow(color, gamma);
 }
 
