@@ -17,7 +17,8 @@ void main()
     vec3 dirToLight = lightDiff / inversesqrt(lightDistSqr);
     float lightFactor = 1.0 / (1.0 + lightDistSqr * lightAttenuation);
 	
-	float cosAngIncidence = dot(cameraSpaceNormal, dirToLight);
+    vec3 surfaceNormal = normalize(cameraSpaceNormal);
+	float cosAngIncidence = dot(surfaceNormal, dirToLight);
 	cosAngIncidence = clamp(cosAngIncidence, 0, 1);
 	
 	outputColor = lightFactor * lightIntensity * cosAngIncidence + ambientIntensity;
