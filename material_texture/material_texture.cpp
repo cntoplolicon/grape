@@ -13,6 +13,7 @@ struct ProgramData
     GLuint modelViewUnif;
     GLuint modelViewForNormalUnif;
     GLuint gaussianTextureUnif;
+    GLuint useLookupTableUnif;
 };
 
 struct UnlitProgramData 
@@ -64,7 +65,7 @@ UnlitProgramData loadUnlitProgram(const std::string &vertShaderFile, const std::
     return data;
 }
 
-const GLuint g_TextureUnit = 0;
+const GLuint g_TextureUnit = 1;
 ProgramData loadLitProgram(const std::string &vertShaderFile, const std::string &fragShaderFile)
 {
     ProgramData data;
@@ -72,6 +73,7 @@ ProgramData loadLitProgram(const std::string &vertShaderFile, const std::string 
     data.modelViewUnif = glGetUniformLocation(data.program, "modelViewMatrix");
     data.modelViewForNormalUnif = glGetUniformLocation(data.program, "modelViewMatrixForNormal");
     data.gaussianTextureUnif = glGetUniformLocation(data.program, "gaussianTexture");
+    data.useLookupTableUnif = glGetUniformLocation(data.program, "useLookupTable");
 
     GLuint materialBlock = glGetUniformBlockIndex(data.program, "MaterialBlock");
     glUniformBlockBinding(data.program, materialBlock, g_materialBlockIndex);
@@ -116,6 +118,8 @@ struct LightingBlock
 
 Mesh *g_objectMesh;
 Mesh *g_cubeMesh;
+
+bool g_useLookupTable = false;
 
 const int NUM_MATERIALS = 3;
 
@@ -169,7 +173,7 @@ void initTexture()
 {
     GLubyte *buffer = new GLubyte[cosAngleResolution * shininessResolution];
     int k = 0;
-	for(int i = 1; i<= shininessResolution; i++) {
+	for(int i = 1; i <= shininessResolution; i++) {
 		float shininess = i / (float)(shininessResolution);
 		for(int j = 0; j < cosAngleResolution; j++) {
 			float cosAng = j / (float)(cosAngleResolution - 1);
@@ -309,6 +313,7 @@ void keyboard(const GLUSboolean pressed, const GLUSint key)
         case 'p': g_lightTimer.TogglePause(); break;
         case '-': g_lightTimer.Rewind(0.5f); break;
         case '=': g_lightTimer.Fastforward(0.5f); break;
+        case 'l': g_useLookupTable = !g_useLookupTable; break;
         default: break;
     }
 
@@ -368,6 +373,7 @@ GLUSboolean display(GLUSfloat time)
     glUseProgram(g_LightingProgram.program);
     glUniformMatrix4fv(g_LightingProgram.modelViewUnif, 1, GL_FALSE, modelViewMatrix);
     glUniformMatrix3fv(g_LightingProgram.modelViewForNormalUnif, 1, GL_FALSE, modelViewMatrixForNormal);
+    glUniform1i(g_LightingProgram.useLookupTableUnif, g_useLookupTable);
     glBindBufferRange(GL_UNIFORM_BUFFER, g_materialBlockIndex, g_materialUniformBuffer, 
             g_materialOffset * g_currMaterial, sizeof(MaterialBlock));
     g_objectMesh->render();

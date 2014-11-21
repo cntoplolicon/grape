@@ -28,6 +28,7 @@ uniform LightingBlock
     Light lights[LIGHT_COUNT];
 } lighting;
 
+uniform bool useLookupTable;
 uniform sampler2D gaussianTexture;
 
 void main()
@@ -53,8 +54,16 @@ void main()
 
         vec3 viewDirection = normalize(-cameraSpacePosition);
         vec3 halfAngle = normalize(viewDirection + lightDirection);
-        vec2 textureCoord = vec2(material.specularShininess, dot(halfAngle, surfaceNormal));
-        float gaussianTerm = texture(gaussianTexture, textureCoord).r;
+        vec2 textureCoord = vec2(dot(halfAngle, surfaceNormal), material.specularShininess);
+        float gaussianTerm;
+        if (useLookupTable) {
+            gaussianTerm = texture(gaussianTexture, textureCoord).r;
+        } else {
+            float normalHalfAngle = acos(dot(surfaceNormal, halfAngle));
+            float exponent = normalHalfAngle / material.specularShininess;
+            exponent = -(exponent * exponent);
+            gaussianTerm = exp(exponent);
+        }
 
         gaussianTerm = cosAngIncidence == 0.0 ? 0.0 : gaussianTerm;
 
