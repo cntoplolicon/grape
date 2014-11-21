@@ -11,7 +11,7 @@ struct ProgramData
 {
     GLuint program;
     GLuint modelViewUnif;
-    GLuint objectColorUnif;
+    GLuint modelViewForNormalUnif;
 };
 
 struct UnlitProgramData 
@@ -68,7 +68,7 @@ ProgramData loadLitProgram(const std::string &vertShaderFile, const std::string 
     ProgramData data;
     data.program = loadProgram(vertShaderFile, fragShaderFile);
     data.modelViewUnif = glGetUniformLocation(data.program, "modelViewMatrix");
-    data.objectColorUnif = glGetUniformLocation(data.program, "objectColor");
+    data.modelViewForNormalUnif = glGetUniformLocation(data.program, "modelViewMatrixForNormal");
 
     GLuint materialBlock = glGetUniformBlockIndex(data.program, "MaterialBlock");
     glUniformBlockBinding(data.program, materialBlock, g_materialBlockIndex);
@@ -255,6 +255,13 @@ void keyboard(const GLUSboolean pressed, const GLUSint key)
         return;
     }
 
+    switch (key) {
+        case 'p': g_lightTimer.TogglePause(); break;
+        case '-': g_lightTimer.Rewind(0.5f); break;
+        case '=': g_lightTimer.Fastforward(0.5f); break;
+        default: break;
+    }
+
     if ('1' <= key && key <= '9') {
         int number = key - '1';
 		if (number < NUM_MATERIALS) {
@@ -279,12 +286,15 @@ GLUSboolean display(GLUSfloat time)
     GLfloat modelMatrix[16];
     GLfloat viewMatrix[16];
     GLfloat modelViewMatrix[16];
+    GLfloat modelViewMatrixForNormal[9];
 
     convertMatrix4x4(modelMatrix, g_objtPole.CalcMatrix());
     convertMatrix4x4(viewMatrix, g_viewPole.CalcMatrix());
     glusMatrix4x4Multiplyf(modelViewMatrix, viewMatrix, modelMatrix);
     glusMatrix4x4Scalef(modelViewMatrix, 2.0f, 2.0f, 2.0f);
-
+    glusMatrix4x4ExtractMatrix3x3f(modelViewMatrixForNormal, modelViewMatrix);
+    glusMatrix3x3Inversef(modelViewMatrixForNormal);
+    glusMatrix3x3Inversef(modelViewMatrixForNormal);
 
     LightingBlock lightingBlock = {
         {0.2f, 0.2f, 0.2f, 1.0f}, 
@@ -307,6 +317,7 @@ GLUSboolean display(GLUSfloat time)
 
     glUseProgram(g_LightingWhiteProgram.program);
     glUniformMatrix4fv(g_LightingWhiteProgram.modelViewUnif, 1, GL_FALSE, modelViewMatrix);
+    glUniformMatrix3fv(g_LightingWhiteProgram.modelViewForNormalUnif, 1, GL_FALSE, modelViewMatrixForNormal);
     glBindBufferRange(GL_UNIFORM_BUFFER, g_materialBlockIndex, g_materialUniformBuffer, 
             g_materialOffset * g_currMaterial, sizeof(MaterialBlock));
     g_objectMesh->render();
