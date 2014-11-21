@@ -28,6 +28,8 @@ uniform LightingBlock
     Light lights[LIGHT_COUNT];
 } lighting;
 
+uniform sampler2D gaussianTexture;
+
 void main()
 {
     vec4 accumulateColor = lighting.ambientIntensity * material.diffuseColor;
@@ -51,10 +53,8 @@ void main()
 
         vec3 viewDirection = normalize(-cameraSpacePosition);
         vec3 halfAngle = normalize(viewDirection + lightDirection);
-        float angleNormalHalf = acos(dot(halfAngle, surfaceNormal));
-        float exponent = angleNormalHalf / material.specularShininess;
-        exponent = -(exponent * exponent);
-        float gaussianTerm = exp(exponent);
+        vec2 textureCoord = vec2(material.specularShininess, dot(halfAngle, surfaceNormal));
+        float gaussianTerm = texture(gaussianTexture, textureCoord).r;
 
         gaussianTerm = cosAngIncidence == 0.0 ? 0.0 : gaussianTerm;
 

@@ -12,6 +12,7 @@ struct ProgramData
     GLuint program;
     GLuint modelViewUnif;
     GLuint modelViewForNormalUnif;
+    GLuint gaussianTextureUnif;
 };
 
 struct UnlitProgramData 
@@ -22,7 +23,7 @@ struct UnlitProgramData
 };
 
 UnlitProgramData g_UnlitProgram;
-ProgramData g_LightingWhiteProgram;
+ProgramData g_LightingProgram;
 
 const int g_materialBlockIndex = 0;
 const int g_lightingBlockIndex = 1;
@@ -63,12 +64,14 @@ UnlitProgramData loadUnlitProgram(const std::string &vertShaderFile, const std::
     return data;
 }
 
+const GLuint g_TextureUnit = 0;
 ProgramData loadLitProgram(const std::string &vertShaderFile, const std::string &fragShaderFile)
 {
     ProgramData data;
     data.program = loadProgram(vertShaderFile, fragShaderFile);
     data.modelViewUnif = glGetUniformLocation(data.program, "modelViewMatrix");
     data.modelViewForNormalUnif = glGetUniformLocation(data.program, "modelViewMatrixForNormal");
+    data.gaussianTextureUnif = glGetUniformLocation(data.program, "gaussianTexture");
 
     GLuint materialBlock = glGetUniformBlockIndex(data.program, "MaterialBlock");
     glUniformBlockBinding(data.program, materialBlock, g_materialBlockIndex);
@@ -76,6 +79,10 @@ ProgramData loadLitProgram(const std::string &vertShaderFile, const std::string 
     glUniformBlockBinding(data.program, lightingBlock, g_lightingBlockIndex);
     GLuint projectionBlock = glGetUniformBlockIndex(data.program, "Projection");
     glUniformBlockBinding(data.program, projectionBlock, g_projectionBlockIndex);
+
+    glUseProgram(data.program);
+    glUniform1i(data.gaussianTextureUnif, g_TextureUnit);
+    glUseProgram(0);
 
 
     return data;
@@ -110,13 +117,14 @@ struct LightingBlock
 Mesh *g_objectMesh;
 Mesh *g_cubeMesh;
 
-const int NUM_MATERIALS = 2;
+const int NUM_MATERIALS = 3;
 
 const float g_fHalfLightDistance = 25.0f;
 const float g_fLightAttenuation = 1.0f / (g_fHalfLightDistance * g_fHalfLightDistance);
 Timer g_lightTimer = Timer(Timer::TT_LOOP, 6.0f);
 float g_lightHeight = 1.0f;
 float g_lightRadius = 3.0f;
+
 void calcLightPosition(GLfloat ret[])
 {
 	const float fScale = 3.14159f * 2.0f;
@@ -132,33 +140,75 @@ void initMaterials()
 {
 	UniformBlockArray<MaterialBlock, NUM_MATERIALS> materials;
 
-    MaterialBlock block0 = {
+    materials[0] = {
         {1.0f, 0.673f, 0.043f, 1.0f},
         {1.0f * 0.4f, 0.673f * 0.4f, 0.043f * 0.4f, 1.0f * 0.4f},
         0.125f
     };
-    materials[0] = block0;
-
-    MaterialBlock block1 = {
+    materials[1] = {
         {0.01f, 0.01f, 0.01f, 1.0f},
         {0.99f, 0.99f, 0.99f, 1.0f},
         0.125f
     };
-    materials[1] = block1;
+    materials[2] = {
+        {0.01f, 0.01f, 0.01f, 1.0f},
+        {0.99f, 0.99f, 0.99f, 1.0f},
+        0.5f
+    };
 
 	g_materialUniformBuffer = materials.createBuffer();
 	g_materialOffset = materials.offset();
 }
 
+const int cosAngleResolution = 512;
+const int shininessResolution = 512;
+GLuint g_Texture;
+GLuint g_textureSampler;
+
+void initTexture()
+{
+    GLubyte *buffer = new GLubyte[cosAngleResolution * shininessResolution];
+    int k = 0;
+	for(int i = 1; i<= shininessResolution; i++) {
+		float shininess = i / (float)(shininessResolution);
+		for(int j = 0; j < cosAngleResolution; j++) {
+			float cosAng = j / (float)(cosAngleResolution - 1);
+			float angle = acosf(cosAng);
+			float exponent = angle / shininess;
+			exponent = -(exponent * exponent);
+			float gaussianTerm = exp(exponent);
+            buffer[k++] = (GLubyte)(gaussianTerm * 255.0f);
+		}
+	}
+
+    glGenTextures(1, &g_Texture);
+    glActiveTexture(GL_TEXTURE0 + g_TextureUnit);
+    glBindTexture(GL_TEXTURE_2D, g_Texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, cosAngleResolution, shininessResolution, 0,
+            GL_RED, GL_UNSIGNED_BYTE, buffer);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+
+    glGenSamplers(1, &g_textureSampler);
+    glSamplerParameteri(g_textureSampler, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glSamplerParameteri(g_textureSampler, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glSamplerParameteri(g_textureSampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glSamplerParameteri(g_textureSampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindSampler(g_TextureUnit, g_textureSampler);
+
+    delete[] buffer;
+}
+
 GLUSboolean init()
 {
     g_UnlitProgram = loadUnlitProgram("./position.vert", "./mono.frag");
-    g_LightingWhiteProgram = loadLitProgram("./position_normal.vert", "./lighting.frag");
+    g_LightingProgram = loadLitProgram("./position_normal.vert", "./lighting.frag");
 
     g_objectMesh = new Mesh("./model/Infinity.xml");
     g_cubeMesh = new Mesh("./model/UnitCube.xml");
 
     initMaterials();
+    initTexture();
 
     glGenBuffers(1, &g_projectionUniformBuffer);
     glBindBuffer(GL_UNIFORM_BUFFER, g_projectionUniformBuffer);
@@ -315,9 +365,9 @@ GLUSboolean display(GLUSfloat time)
     glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(lightingBlock), &lightingBlock);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-    glUseProgram(g_LightingWhiteProgram.program);
-    glUniformMatrix4fv(g_LightingWhiteProgram.modelViewUnif, 1, GL_FALSE, modelViewMatrix);
-    glUniformMatrix3fv(g_LightingWhiteProgram.modelViewForNormalUnif, 1, GL_FALSE, modelViewMatrixForNormal);
+    glUseProgram(g_LightingProgram.program);
+    glUniformMatrix4fv(g_LightingProgram.modelViewUnif, 1, GL_FALSE, modelViewMatrix);
+    glUniformMatrix3fv(g_LightingProgram.modelViewForNormalUnif, 1, GL_FALSE, modelViewMatrixForNormal);
     glBindBufferRange(GL_UNIFORM_BUFFER, g_materialBlockIndex, g_materialUniformBuffer, 
             g_materialOffset * g_currMaterial, sizeof(MaterialBlock));
     g_objectMesh->render();
