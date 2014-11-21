@@ -5,8 +5,6 @@
 #include "mesh.hpp"
 #include "mouse_pole.hpp"
 
-#define ARRAY_COUNT( array ) (sizeof( array ) / (sizeof( array[0] ) * (sizeof( array ) != sizeof(void*) || sizeof( array[0] ) <= sizeof(void*))))
-
 struct ProgramData
 {
 	GLuint theProgram;
