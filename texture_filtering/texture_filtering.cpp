@@ -1,3 +1,4 @@
+#include <memory>
 #include "GL/glus.h"
 #include "glutil/glutil.h"
 #include "glm/glm.hpp"
