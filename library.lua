@@ -10,7 +10,7 @@ function setup_project(proj, ...)
 
         files {...}
         includedirs {"../include", "../include/GLUS", "../framework"}
-        links {"GLUS", "glfw3", "GLEW", "glutil"}
+        links {"GLUS", "glfw3", "GLEW", "glutil", "glimg"}
 
         flags {"ExtraWarnings", "FatalWarnings"}
 
