@@ -12,8 +12,8 @@ OBJS := $(OBJS:.c=.o)
 DEPS := $(OBJS:.o=.d)
 TARGET := ssre
 
-CXX := clang++
-CXXFLAGS := -Wall -Wextra -Werror -fexceptions -fPIC -std=c++11 -stdlib=libc++
+CXX := g++
+CXXFLAGS := -Wall -Wextra -Werror -fexceptions -fPIC -std=c++11
 LIBS := -lSDL2 -lSDL2_image
 INCLUDES := -I ./include
 
