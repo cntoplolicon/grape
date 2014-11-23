@@ -3,6 +3,12 @@ function setup_solution(sln)
         configurations("Debug", "Release")
 end
 
+function pkg_config(libs)
+    local libs_str = table.concat(libs, " ")
+    buildoptions {"`pkg-config --cflags " .. libs_str .. "`"}
+    linkoptions {"`pkg-config --libs " .. libs_str .. "`"}
+end
+
 function setup_project(proj, ...)
     project(proj)
         kind "ConsoleApp"
@@ -10,7 +16,7 @@ function setup_project(proj, ...)
 
         files {...}
         includedirs {"../include", "../include/GLUS", "../framework"}
-        links {"GLUS", "glfw3", "GLEW", "glutil", "glimg"}
+        links {"GLUS", "glutil", "glimg"}
 
         flags {"ExtraWarnings", "FatalWarnings"}
 
@@ -34,6 +40,7 @@ function setup_project(proj, ...)
             libdirs {"../lib/osx"}
 
         configuration {"gmake"}
-            buildoptions {"-std=c++11" }
+            buildoptions {"-std=c++11"}
+            pkg_config {"glfw3", "glew"}
 end
 
