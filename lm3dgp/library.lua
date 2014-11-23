@@ -41,6 +41,7 @@ function setup_project(proj, ...)
 
         configuration {"gmake"}
             buildoptions {"-std=c++11"}
+            linkoptions {"-lGLUS"}   -- workaround of the stupid linking order issue of g++
             pkg_config {"glfw3", "glew"}
 end
 
