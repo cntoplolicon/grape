@@ -1,0 +1,11 @@
+*.o
+*.d
+*.swp
+Makefile
+*.make
+*Debug
+*Release
+*.pyc
+
+*.trace
+*.debug
