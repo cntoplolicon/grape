@@ -29,6 +29,7 @@
 # For more information, please refer to <http://unlicense.org/>
 
 import os
+import subprocess;
 import ycm_core
 
 # These are the compilation flags that will be used in case there's no
@@ -67,6 +68,7 @@ flags = [
 './include',
 '-I',
 './framework',
+'`pkg-config --cflags ImageMagick++`',
 '-isystem',
 '/usr/include',
 '-isystem',
@@ -83,6 +85,13 @@ flags = [
 '/Library/Frameworks',
 ]
 
+pkg_config_command = [
+'pkg-config',
+'--cflags',
+'ImageMagick++'
+]
+
+flags += subprocess.check_output(pkg_config_command).strip().split(' ')
 
 # Set this to the absolute path to the folder (NOT the file!) containing the
 # compile_commands.json file to use that instead of 'flags'. See here for

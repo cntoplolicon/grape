@@ -1,15 +1,16 @@
 #include <iostream>
 #include "GL/glus.h"
 #include "camera.hpp"
+#include "texture.hpp"
 
 const int WINDOW_WIDTH = 1024;
 const int WINDOW_HEIGHT = 768;
 
 const float vertexData[] = {
-    -1.0f, -1.0f, 0.5773f,
-    0.0f, -1.0f, -1.15475f,
-    1.0f, -1.0f, 0.5773f,
-    0.0f, 1.0f, 0.0f,
+    -1.0f, -1.0f, 0.5773f, 0.0f, 0.0f,
+    0.0f, -1.0f, -1.15475f, 0.5f, 0.0f,
+    1.0f, -1.0f, 0.5773f, 1.0f, 0.0f,
+    0.0f, 1.0f, 0.0f, 0.5f, 1.0f
 };
 const unsigned int indexData[] = {
     0, 3, 1,
@@ -22,12 +23,16 @@ GLuint indexBufferObject;
 GLuint vertexBufferObject;
 GLuint vertexArrayObject;
 
+Texture* pTexture = nullptr;
+
 struct Program
 {
     GLuint program;
     GLuint position;
+    GLuint texCoord;
     GLuint modelViewMatrix;
     GLuint projectionMatrix;
+    GLuint textureSampler;
 };
 Program program;
 
@@ -48,8 +53,10 @@ void initProgram()
 
     program.program = glusProgram.program;
     program.position = glGetAttribLocation(program.program, "position");
+    program.texCoord = glGetAttribLocation(program.program, "texCoord");
     program.modelViewMatrix = glGetUniformLocation(program.program, "modelViewMatrix");
     program.projectionMatrix = glGetUniformLocation(program.program, "projectionMatrix");
+    program.textureSampler = glGetUniformLocation(program.program, "textureSampler");
 }
 
 void initVertexBuffers()
@@ -67,7 +74,9 @@ void initVertexBuffers()
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indexData), indexData, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(program.position);
-    glVertexAttribPointer(program.position, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glVertexAttribPointer(program.position, 3, GL_FLOAT, GL_FALSE, 20, 0);
+    glEnableVertexAttribArray(program.texCoord);
+    glVertexAttribPointer(program.texCoord, 2, GL_FLOAT, GL_FALSE, 20, reinterpret_cast<void *>(12));
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
@@ -79,7 +88,14 @@ GLUSboolean init(GLUSvoid)
     initProgram();
     initVertexBuffers();
 
+    pTexture = new Texture(GL_TEXTURE_2D, "../content/test.png");
+
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+
+    glFrontFace(GL_CCW);
+    glCullFace(GL_BACK);
+    glEnable(GL_CULL_FACE);
+
     glEnable(GL_DEPTH_TEST);
     glDepthMask(GL_TRUE);
 
@@ -115,6 +131,9 @@ GLUSboolean update(GLUSfloat time)
     glusMatrix4x4Perspectivef(projectionMatrix, 60.0f, (GLUSfloat)WINDOW_WIDTH / (GLUSfloat)WINDOW_HEIGHT, 1.0f, 100.0f);
     glUniformMatrix4fv(program.projectionMatrix, 1, GL_FALSE, projectionMatrix);
 
+    glUniform1i(program.textureSampler, 0);
+    pTexture->Bind(GL_TEXTURE0);
+
     glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
     glUseProgram(0);
@@ -134,10 +153,12 @@ GLUSvoid mouseMove(GLUSint buttons, GLUSint x, GLUSint y)
 
 GLUSvoid terminate(GLUSvoid)
 {
+    delete pTexture;
 }
 
 int main(int argc, char* argv[])
 {
+    MagickCore::MagickCoreGenesis(*argv, Magick::MagickFalse);    
     EGLint eglConfigAttributes[] = {
         EGL_RED_SIZE, 8,
         EGL_GREEN_SIZE, 8,
@@ -173,3 +194,4 @@ int main(int argc, char* argv[])
 
     return 0;
 }
+
