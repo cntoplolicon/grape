@@ -1,5 +1,6 @@
 #include <iostream>
 #include "GL/glus.h"
+#include "camera.hpp"
 
 const int WINDOW_WIDTH = 1024;
 const int WINDOW_HEIGHT = 768;
@@ -29,6 +30,8 @@ struct Program
     GLuint projectionMatrix;
 };
 Program program;
+
+Camera camera;
 
 void initProgram()
 {
@@ -102,7 +105,7 @@ GLUSboolean update(GLUSfloat time)
     glusMatrix4x4Translatef(modelMatrix, 0.0f, 0.0f, 3.0f);
     glusMatrix4x4RotateRyf(modelMatrix, rotate);
     GLfloat viewMatrix[16];
-    glusMatrix4x4LookAtf(viewMatrix, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f);
+    camera.GetMatrix(viewMatrix);
     GLfloat modelViewMatrix[16];
     glusMatrix4x4Multiplyf(modelViewMatrix, viewMatrix, modelMatrix);
 
@@ -117,6 +120,14 @@ GLUSboolean update(GLUSfloat time)
     glUseProgram(0);
 
     return GLUS_TRUE;
+}
+
+GLUSvoid keyboard(GLUSboolean pressed, GLUSint key)
+{
+    if (!pressed) {
+        return;
+    }
+    camera.OnKey(key);
 }
 
 GLUSvoid terminate(GLUSvoid)
@@ -147,6 +158,7 @@ int main(int argc, char* argv[])
     glusWindowSetReshapeFunc(reshape);
     glusWindowSetUpdateFunc(update);
     glusWindowSetTerminateFunc(terminate);
+    glusWindowSetKeyFunc(keyboard);
 
     if (!glusWindowCreate("Main Window", WINDOW_WIDTH, WINDOW_HEIGHT, GLUS_FALSE, GLUS_FALSE, eglConfigAttributes, eglContextAttributes))
     {
