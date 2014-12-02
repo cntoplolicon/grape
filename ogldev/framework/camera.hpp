@@ -8,9 +8,12 @@ class Camera
 {
     const float STEP = 0.1f;
 
-    GLfloat position[3];
-    GLfloat direction[3];
-    GLfloat up[3];
+    GLUSfloat position[3];
+    GLUSfloat direction[3];
+    GLUSfloat up[3];
+
+    GLUSfloat theta = 0.0f;
+    GLUSfloat phi = 0.0f;
 
 public:
     Camera() 
@@ -48,8 +51,11 @@ public:
                 target[0], target[1], target[2], up[0], up[1], up[2]);
     }
 
-    void OnKey(GLUSint key) 
+    void OnKey(GLUSboolean pressed, GLUSint key) 
     {
+        if (!pressed) {
+            return;
+        }
         GLUSfloat step[3] = {0.0f, 0.0f, 0.0f};
         switch (key) {
             case 'w':
@@ -60,16 +66,41 @@ public:
                 break;
             case 'a':
                 glusVector3Crossf(step, direction, up);
-                glusVector3MultiplyScalarf(step, step, STEP);
+                glusVector3MultiplyScalarf(step, step, -STEP);
                 break;
             case 'd':
                 glusVector3Crossf(step, direction, up);
-                glusVector3MultiplyScalarf(step, step, -STEP);
+                glusVector3MultiplyScalarf(step, step, STEP);
                 break;
             default:
                 break;
         }
         glusVector3AddVector3f(position, position, step);
+    }
+
+    void UpdateDirection(GLUSint x, GLUSint y)
+    {
+        GLUSfloat forward[3] = {0.0f, 0.0f, 1.0f};
+        theta += -x / 20.0f;
+        phi += y / 20.0f;
+        phi = glusMathClampf(phi, -90.0f, 90.0f);
+        GLUSfloat rotation[16];
+        glusMatrix4x4Identityf(rotation);
+        glusMatrix4x4RotateRyf(rotation, theta);
+        glusMatrix4x4RotateRxf(rotation, phi);
+        glusMatrix4x4MultiplyVector3f(direction, rotation, forward);
+    }
+
+    void OnMouse(GLUSint buttons, GLUSint x, GLUSint y)
+    {
+        static bool initialized = false;
+        static GLUSint mouseX, mouseY;
+        if (initialized) {
+            UpdateDirection(x - mouseX, y - mouseY);
+        }
+        initialized = true;
+        mouseX = x;
+        mouseY = y;
     }
 };
 

@@ -124,10 +124,12 @@ GLUSboolean update(GLUSfloat time)
 
 GLUSvoid keyboard(GLUSboolean pressed, GLUSint key)
 {
-    if (!pressed) {
-        return;
-    }
-    camera.OnKey(key);
+    camera.OnKey(pressed, key);
+}
+
+GLUSvoid mouseMove(GLUSint buttons, GLUSint x, GLUSint y)
+{
+    camera.OnMouse(buttons, x, y);
 }
 
 GLUSvoid terminate(GLUSvoid)
@@ -159,6 +161,7 @@ int main(int argc, char* argv[])
     glusWindowSetUpdateFunc(update);
     glusWindowSetTerminateFunc(terminate);
     glusWindowSetKeyFunc(keyboard);
+    glusWindowSetMouseMoveFunc(mouseMove);
 
     if (!glusWindowCreate("Main Window", WINDOW_WIDTH, WINDOW_HEIGHT, GLUS_FALSE, GLUS_FALSE, eglConfigAttributes, eglContextAttributes))
     {
