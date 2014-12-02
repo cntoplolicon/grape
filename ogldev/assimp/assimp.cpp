@@ -75,6 +75,11 @@ GLUSboolean init(GLUSvoid)
 {
     initProgram();
     initVertexBuffers();
+
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_TRUE);
+
     return GLUS_TRUE;
 }
 
@@ -85,8 +90,7 @@ GLUSvoid reshape(GLUSint width, GLUSint height)
 
 GLUSboolean update(GLUSfloat time)
 {
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glUseProgram(program.program);
     glBindVertexArray(vertexArrayObject);
@@ -98,7 +102,7 @@ GLUSboolean update(GLUSfloat time)
     glusMatrix4x4Translatef(modelMatrix, 0.0f, 0.0f, 3.0f);
     glusMatrix4x4RotateRyf(modelMatrix, rotate);
     GLfloat viewMatrix[16];
-    glusMatrix4x4LookAtf(viewMatrix, 0.0f, 0.0f, -3.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f);
+    glusMatrix4x4LookAtf(viewMatrix, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f);
     GLfloat modelViewMatrix[16];
     glusMatrix4x4Multiplyf(modelViewMatrix, viewMatrix, modelMatrix);
 
@@ -125,7 +129,7 @@ int main(int argc, char* argv[])
         EGL_RED_SIZE, 8,
         EGL_GREEN_SIZE, 8,
         EGL_BLUE_SIZE, 8,
-        EGL_DEPTH_SIZE, 0,
+        EGL_DEPTH_SIZE, 8,
         EGL_STENCIL_SIZE, 0,
         EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
         EGL_NONE
