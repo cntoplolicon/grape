@@ -233,6 +233,73 @@ struct Matrix4x4f
     }
 };
 
+struct Quaternion
+{
+    Vector3f v;
+    float w;
+
+    float * value_ptr()
+    {
+        return v.value_ptr();
+    }
+
+    const float * const_value_ptr() const
+    {
+        return v.const_value_ptr();
+    }
+
+    static Quaternion identity()
+    {
+        Quaternion r;
+        glusQuaternionIdentityf(r.value_ptr());
+        return r;
+    }
+    
+    Quaternion & operator *= (const Quaternion &q)
+    {
+        glusQuaternionMultiplyQuaternionf(value_ptr(), const_value_ptr(), q.const_value_ptr());
+        return *this;
+    }
+
+    Quaternion operator * (const Quaternion &q) const
+    {
+        Quaternion r = *this;
+        r *= q;
+        return r;
+    }
+
+    Vector3f operator * (const Vector3f &vf) const
+    {
+        return getMatrix() * vf;
+    }
+
+    Quaternion normalized() const
+    {
+        Quaternion r = *this;
+        glusQuaternionNormalizef(r.value_ptr());
+        return r;
+    }
+
+    Quaternion inverse() const
+    {
+        Quaternion r = *this;
+        glusQuaternionInversef(r.value_ptr());
+        return r;
+    }
+
+    static Quaternion rotate(float degree, Vector3f axis)
+    {
+        Quaternion r;
+        glusQuaternionRotatef(r.value_ptr(), degree, axis.x, axis.y, axis.z);
+        return r;
+    }
+
+    Matrix4x4f getMatrix() const
+    {
+        Matrix4x4f r;
+        glusQuaternionGetMatrix4x4f(r.value_ptr(), const_value_ptr());
+        return r;
+    }
+};
+
 #endif
-
-

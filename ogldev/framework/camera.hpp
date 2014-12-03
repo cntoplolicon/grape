@@ -1,7 +1,7 @@
 #ifndef __CAMERA_H__
 #define __CAMERA_H__
 
-#include <algorithm>
+#include <iostream>
 #include "GL/glus.h"
 #include "math.hpp"
 
@@ -12,9 +12,6 @@ class Camera
     Vector3f position;
     Vector3f direction;
     Vector3f up;
-
-    GLUSfloat theta = 0.0f;
-    GLUSfloat phi = 0.0f;
 
 public:
     Camera() 
@@ -89,14 +86,9 @@ public:
 
     void updateDirection(GLUSint x, GLUSint y)
     {
-        Vector3f forward = {0.0f, 0.0f, 1.0f};
-        theta += -x / 20.0f;
-        phi += y / 20.0f;
-        phi = clamp(phi, -90.0f, 90.0f);
-        Matrix4x4f rotation = Matrix4x4f::identity();;
-        rotation = rotation.rotatey(theta);
-        rotation = rotation.rotatex(phi);
-        direction = rotation * forward;
+        Quaternion vert = Quaternion::rotate(-x / 20.0f, {0.0f, 1.0f, 0.0f});
+        Quaternion hort = Quaternion::rotate(-y / 20.0f, direction.cross(up));
+        direction = hort * vert * direction;
     }
 
     void onMouse(GLUSint buttons, GLUSint x, GLUSint y)
