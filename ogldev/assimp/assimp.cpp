@@ -7,16 +7,36 @@ const int WINDOW_WIDTH = 1024;
 const int WINDOW_HEIGHT = 768;
 
 const float vertexData[] = {
-    -1.0f, -1.0f, 0.5773f, 0.0f, 0.0f,
-    0.0f, -1.0f, -1.15475f, 0.5f, 0.0f,
-    1.0f, -1.0f, 0.5773f, 1.0f, 0.0f,
-    0.0f, 1.0f, 0.0f, 0.5f, 1.0f
+    0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+    0.0f, 0.0f, 20.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+    10.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+    10.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+    0.0f, 0.0f, 20.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+    10.0f, 0.0f, 20.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f
 };
 const unsigned int indexData[] = {
     0, 3, 1,
     1, 3, 2,
     2, 3, 0,
     0, 1, 2
+};
+
+struct BaseLight
+{
+    GLfloat color[3];
+    GLfloat ambientIntensity;
+    GLfloat diffuseIntensity;
+};
+
+struct DirectionalLight
+{
+    BaseLight base;
+    GLfloat direction[3];
+};
+
+DirectionalLight directionalLight = {
+    {{1.0f, 1.0f, 1.0f}, 0.01f, 0.01f},
+    {1.0f, -1.0f, 0.0f}
 };
 
 GLuint indexBufferObject;
@@ -30,12 +50,27 @@ struct Program
     GLuint program;
     GLuint position;
     GLuint texCoord;
+    GLuint normal;
     GLuint modelViewMatrix;
+    GLuint modelViewMatrixForNormal;
     GLuint projectionMatrix;
     GLuint textureSampler;
+
+    struct 
+    {
+        GLuint color;
+        GLuint ambientIntensity;
+        GLuint diffuseIntensity;
+        GLuint direction;
+    } directionalLight;
+
+    struct
+    {
+        GLuint specularIntensity;
+        GLuint shiness;
+    } material;
 };
 Program program;
-
 Camera camera;
 
 void initProgram()
@@ -54,9 +89,17 @@ void initProgram()
     program.program = glusProgram.program;
     program.position = glGetAttribLocation(program.program, "position");
     program.texCoord = glGetAttribLocation(program.program, "texCoord");
+    program.normal = glGetAttribLocation(program.program, "normal");
     program.modelViewMatrix = glGetUniformLocation(program.program, "modelViewMatrix");
+    program.modelViewMatrixForNormal = glGetUniformLocation(program.program, "modelViewMatrixForNormal");
     program.projectionMatrix = glGetUniformLocation(program.program, "projectionMatrix");
     program.textureSampler = glGetUniformLocation(program.program, "textureSampler");
+    program.directionalLight.color = glGetUniformLocation(program.program, "directionalLight.base.color");
+    program.directionalLight.ambientIntensity = glGetUniformLocation(program.program, "directionalLight.base.ambientIntensity");
+    program.directionalLight.diffuseIntensity = glGetUniformLocation(program.program, "directionalLight.base.diffuseIntensity");
+    program.directionalLight.direction = glGetUniformLocation(program.program, "directionalLight.direction");
+    program.material.specularIntensity = glGetUniformLocation(program.program, "specularIntensity");
+    program.material.shiness = glGetUniformLocation(program.program, "shiness");
 }
 
 void initVertexBuffers()
@@ -74,13 +117,19 @@ void initVertexBuffers()
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indexData), indexData, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(program.position);
-    glVertexAttribPointer(program.position, 3, GL_FLOAT, GL_FALSE, 20, 0);
+    glVertexAttribPointer(program.position, 3, GL_FLOAT, GL_FALSE, 32, 0);
     glEnableVertexAttribArray(program.texCoord);
-    glVertexAttribPointer(program.texCoord, 2, GL_FLOAT, GL_FALSE, 20, reinterpret_cast<void *>(12));
+    glVertexAttribPointer(program.texCoord, 2, GL_FLOAT, GL_FALSE, 32, reinterpret_cast<const GLvoid *>(12));
+    glEnableVertexAttribArray(program.normal);
+    glVertexAttribPointer(program.normal, 3, GL_FLOAT, GL_FALSE, 32, reinterpret_cast<const GLvoid *>(20));
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
     glUseProgram(0);
+
+    glDisableVertexAttribArray(program.position);
+    glDisableVertexAttribArray(program.texCoord);
+    glDisableVertexAttribArray(program.normal);
 }
 
 GLUSboolean init(GLUSvoid)
@@ -89,6 +138,9 @@ GLUSboolean init(GLUSvoid)
     initVertexBuffers();
 
     pTexture = new Texture(GL_TEXTURE_2D, "../content/test.png");
+    camera.SetPosition(5.0f, 1.0f, -3.0f);
+    camera.SetDirection(0.0f, 0.0f, 1.0f);
+    camera.SetUpDireciton(0.0, 1.0f, 0.0f);
 
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
@@ -114,27 +166,40 @@ GLUSboolean update(GLUSfloat time)
     glUseProgram(program.program);
     glBindVertexArray(vertexArrayObject);
 
-    static float rotate = 0.0f;
-    rotate += 0.1f;
+    // model view
     GLfloat modelMatrix[16];
     glusMatrix4x4Identityf(modelMatrix);
-    glusMatrix4x4Translatef(modelMatrix, 0.0f, 0.0f, 3.0f);
-    glusMatrix4x4RotateRyf(modelMatrix, rotate);
+    glusMatrix4x4Translatef(modelMatrix, 0.0f, 0.0f, 1.0f);
     GLfloat viewMatrix[16];
     camera.GetMatrix(viewMatrix);
     GLfloat modelViewMatrix[16];
     glusMatrix4x4Multiplyf(modelViewMatrix, viewMatrix, modelMatrix);
-
     glUniformMatrix4fv(program.modelViewMatrix, 1, GL_FALSE, modelViewMatrix);
 
+    // model view for normal
+    glusMatrix4x4Inversef(modelViewMatrix);
+    glusMatrix4x4Transposef(modelViewMatrix);
+    glUniformMatrix4fv(program.modelViewMatrixForNormal, 1, GL_FALSE, modelViewMatrix);
+
+    // projection
     GLfloat projectionMatrix[16];
-    glusMatrix4x4Perspectivef(projectionMatrix, 60.0f, (GLUSfloat)WINDOW_WIDTH / (GLUSfloat)WINDOW_HEIGHT, 1.0f, 100.0f);
+    glusMatrix4x4Perspectivef(projectionMatrix, 60.0f, (GLUSfloat)WINDOW_WIDTH / (GLUSfloat)WINDOW_HEIGHT, 1.0f, 50.0f);
     glUniformMatrix4fv(program.projectionMatrix, 1, GL_FALSE, projectionMatrix);
+
+    // directional light
+    glUniform3fv(program.directionalLight.color, 1, directionalLight.base.color);
+    glUniform1f(program.directionalLight.ambientIntensity, directionalLight.base.ambientIntensity);
+    glUniform1f(program.directionalLight.diffuseIntensity, directionalLight.base.diffuseIntensity);
+    glUniform3fv(program.directionalLight.direction, 1, directionalLight.direction);
+    
+    // specular lighting
+    glUniform1f(program.material.specularIntensity, 1.0f);
+    glUniform1f(program.material.shiness, 2.0f);
 
     glUniform1i(program.textureSampler, 0);
     pTexture->Bind(GL_TEXTURE0);
 
-    glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);
     glUseProgram(0);
 
@@ -144,6 +209,27 @@ GLUSboolean update(GLUSfloat time)
 GLUSvoid keyboard(GLUSboolean pressed, GLUSint key)
 {
     camera.OnKey(pressed, key);
+    if (!pressed) {
+        return;
+    }
+    switch (key) {
+        case 'z':
+            directionalLight.base.ambientIntensity -= 0.05f;
+            break;
+        case 'x':
+            directionalLight.base.ambientIntensity += 0.05f;
+            break;
+        case 'c':
+            directionalLight.base.diffuseIntensity -= 0.05f;
+            break;
+        case 'v':
+            directionalLight.base.diffuseIntensity += 0.05f;
+            break;
+        default:
+            break;
+    }
+    directionalLight.base.ambientIntensity = glusMathClampf(directionalLight.base.ambientIntensity, 0.0f, 1.0f);
+    directionalLight.base.diffuseIntensity = glusMathClampf(directionalLight.base.diffuseIntensity, 0.0f, 1.0f);
 }
 
 GLUSvoid mouseMove(GLUSint buttons, GLUSint x, GLUSint y)
