@@ -8,6 +8,7 @@ const int WINDOW_WIDTH = 1920;
 const int WINDOW_HEIGHT = 1200;
 
 const int MAX_POINT_LIGHTS = 2;
+const int MAX_SPOT_LIGHTS = 2;                                                      
 
 const float vertexData[] = {
     0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
@@ -24,14 +25,7 @@ const unsigned int indexData[] = {
     0, 1, 2
 };
 
-struct Vector3f
-{
-    GLfloat x, y, z;
-    GLfloat * value_ptr()
-    {
-        return &x;
-    }
-};
+
 
 struct BaseLight
 {
@@ -60,11 +54,19 @@ struct PointLight
     Attenuation attenuation;
 };
 
+struct SpotLight
+{
+    PointLight base;
+    Vector3f direction;
+    float cutoff;
+};
+
 DirectionalLight directionalLight = {
     {{1.0f, 1.0f, 1.0f}, 0.01f, 0.01f},
     {1.0f, -1.0f, 0.0f}
 };
-PointLight pointLights[2];
+PointLight pointLights[MAX_POINT_LIGHTS];
+SpotLight spotLights[MAX_SPOT_LIGHTS];
 
 GLuint indexBufferObject;
 GLuint vertexBufferObject;
@@ -99,6 +101,13 @@ struct PointLightUniform
     AttenuationUniform attenuation;
 };
 
+struct SpotLightUniform
+{
+    PointLightUniform base;
+    GLuint direction;
+    GLuint cutoff;
+};
+
 struct Program
 {
     GLuint program;
@@ -113,6 +122,8 @@ struct Program
     DirectionalLightUnform directionalLight;
     GLuint numPointLights;
     PointLightUniform pointLights[MAX_POINT_LIGHTS];
+    GLuint numSpotLights;
+    SpotLightUniform spotLights[MAX_SPOT_LIGHTS];
 
     struct
     {
@@ -173,6 +184,29 @@ void initProgram()
         program.pointLights[i].attenuation.linear = glGetUniformLocation(program.program, buffer);
         sprintf(buffer, "pointLights[%d].attenuation.quadratic", i);
         program.pointLights[i].attenuation.quadratic= glGetUniformLocation(program.program, buffer);
+    }
+    program.numSpotLights = glGetUniformLocation(program.program, "numSpotLights");
+    assert(program.numSpotLights != 0xffffffff);
+    for (int i = 0; i < MAX_SPOT_LIGHTS; i++) {
+        char buffer[256];
+        sprintf(buffer, "spotLights[%d].base.base.color", i);
+        program.spotLights[i].base.base.color = glGetUniformLocation(program.program, buffer);
+        sprintf(buffer, "spotLights[%d].base.base.ambientIntensity", i);
+        program.spotLights[i].base.base.ambientIntensity = glGetUniformLocation(program.program, buffer);
+        sprintf(buffer, "spotLights[%d].base.base.diffuseIntensity", i);
+        program.spotLights[i].base.base.diffuseIntensity = glGetUniformLocation(program.program, buffer);
+        sprintf(buffer, "spotLights[%d].base.position", i);
+        program.spotLights[i].base.position = glGetUniformLocation(program.program, buffer);
+        sprintf(buffer, "spotLights[%d].base.attenuation.constant", i);
+        program.spotLights[i].base.attenuation.constant = glGetUniformLocation(program.program, buffer);
+        sprintf(buffer, "spotLights[%d].base.attenuation.linear", i);
+        program.spotLights[i].base.attenuation.linear = glGetUniformLocation(program.program, buffer);
+        sprintf(buffer, "spotLights[%d].base.attenuation.quadratic", i);
+        program.spotLights[i].base.attenuation.quadratic = glGetUniformLocation(program.program, buffer);
+        sprintf(buffer, "spotLights[%d].direction", i);
+        program.spotLights[i].direction = glGetUniformLocation(program.program, buffer);
+        sprintf(buffer, "spotLights[%d].cutoff", i);
+        program.spotLights[i].cutoff = glGetUniformLocation(program.program, buffer);
     }
 }
 
@@ -265,11 +299,11 @@ GLUSboolean update(GLUSfloat time)
     // point light
     static float scale = 0.0f;
     scale += 0.0057f;
-    pointLights[0].base.diffuseIntensity = 0.5f;
+    pointLights[0].base.diffuseIntensity = 0.25f;
     pointLights[0].base.color = {1.0f, 0.5f, 0.0f};
     pointLights[0].position = {3.0f, 1.0f, 20.0f * (cosf(scale) + 1.0f) / 2.0f};
     pointLights[0].attenuation.linear = 0.1f;
-    pointLights[1].base.diffuseIntensity = 0.5f;
+    pointLights[1].base.diffuseIntensity = 0.25f;
     pointLights[1].base.color = {0.0f, 0.5f, 1.0f};
     pointLights[1].position = {7.0f, 1.0f, 20.0f * (sinf(scale) + 1.0f) / 2.0f};
     pointLights[1].attenuation.linear = 0.1f;
@@ -282,6 +316,32 @@ GLUSboolean update(GLUSfloat time)
         glUniform1f(program.pointLights[i].attenuation.constant, pointLights[i].attenuation.constant);
         glUniform1f(program.pointLights[i].attenuation.linear, pointLights[i].attenuation.linear);
         glUniform1f(program.pointLights[i].attenuation.quadratic, pointLights[i].attenuation.quadratic);
+    }
+
+    // spot light
+    spotLights[0].base.base.diffuseIntensity = 0.9f;
+    spotLights[0].base.base.color = {0.0f, 1.0f, 1.0f};
+    spotLights[0].base.position = camera.GetPosition();
+    spotLights[0].direction = camera.GetDirection();
+    spotLights[0].base.attenuation.linear = 0.1f;
+    spotLights[0].cutoff = 10.0f;
+    spotLights[1].base.base.diffuseIntensity = 0.9f;
+    spotLights[1].base.base.color = {1.0f, 1.0f, 1.0f};
+    spotLights[1].base.position = {5.0f, 3.0f, 10.0f};
+    spotLights[1].direction = {0.0f, -1.0f, 0.0f};
+    spotLights[1].base.attenuation.linear = 0.1f;
+    spotLights[1].cutoff = 20.0f;
+    glUniform1i(program.numSpotLights, 2);
+    for (int i = 0; i < MAX_SPOT_LIGHTS; i++) {
+        glUniform3fv(program.spotLights[i].base.base.color, 1, spotLights[i].base.base.color.value_ptr());
+        glUniform1f(program.spotLights[i].base.base.ambientIntensity, spotLights[i].base.base.ambientIntensity);
+        glUniform1f(program.spotLights[i].base.base.diffuseIntensity, spotLights[i].base.base.diffuseIntensity);
+        glUniform3fv(program.spotLights[i].base.position, 1, spotLights[i].base.position.value_ptr());
+        glUniform1f(program.spotLights[i].base.attenuation.constant, spotLights[i].base.attenuation.constant);
+        glUniform1f(program.spotLights[i].base.attenuation.linear, spotLights[i].base.attenuation.linear);
+        glUniform1f(program.spotLights[i].base.attenuation.quadratic, spotLights[i].base.attenuation.quadratic);
+        glUniform3fv(program.spotLights[i].direction, 1, spotLights[i].direction.value_ptr());
+        glUniform1f(program.spotLights[i].cutoff, spotLights[i].cutoff);
     }
 
     // specular lighting

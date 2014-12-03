@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include "GL/glus.h"
+#include "math.hpp"
 
 class Camera
 {
@@ -49,6 +50,21 @@ public:
         glusVector3AddVector3f(target, position, direction);
         glusMatrix4x4LookAtf(result, position[0], position[1], position[2], 
                 target[0], target[1], target[2], up[0], up[1], up[2]);
+    }
+
+    Vector3f GetPosition()
+    {
+        return {position[0], position[1], position[2]};
+    }
+
+    Vector3f GetDirection()
+    {
+        return {direction[0], direction[1], direction[2]};
+    }
+
+    Vector3f GetUpDirection()
+    {
+        return {up[0], up[1], up[2]};
     }
 
     void OnKey(GLUSboolean pressed, GLUSint key) 
