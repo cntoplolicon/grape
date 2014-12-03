@@ -1,10 +1,13 @@
 #include <iostream>
+#include <cassert>
 #include "GL/glus.h"
 #include "camera.hpp"
 #include "texture.hpp"
 
-const int WINDOW_WIDTH = 1024;
-const int WINDOW_HEIGHT = 768;
+const int WINDOW_WIDTH = 1920;
+const int WINDOW_HEIGHT = 1200;
+
+const int MAX_POINT_LIGHTS = 2;
 
 const float vertexData[] = {
     0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
@@ -21,9 +24,18 @@ const unsigned int indexData[] = {
     0, 1, 2
 };
 
+struct Vector3f
+{
+    GLfloat x, y, z;
+    GLfloat * value_ptr()
+    {
+        return &x;
+    }
+};
+
 struct BaseLight
 {
-    GLfloat color[3];
+    Vector3f color;
     GLfloat ambientIntensity;
     GLfloat diffuseIntensity;
 };
@@ -31,19 +43,61 @@ struct BaseLight
 struct DirectionalLight
 {
     BaseLight base;
-    GLfloat direction[3];
+    Vector3f direction;
+};
+
+struct Attenuation
+{
+    GLfloat constant = 1.0f;
+    GLfloat linear = 0.0f;
+    GLfloat quadratic = 0.0f;
+};
+
+struct PointLight
+{
+    BaseLight base;
+    Vector3f position;
+    Attenuation attenuation;
 };
 
 DirectionalLight directionalLight = {
     {{1.0f, 1.0f, 1.0f}, 0.01f, 0.01f},
     {1.0f, -1.0f, 0.0f}
 };
+PointLight pointLights[2];
 
 GLuint indexBufferObject;
 GLuint vertexBufferObject;
 GLuint vertexArrayObject;
 
 Texture* pTexture = nullptr;
+
+struct BaseLineUniform
+{
+    GLuint color;
+    GLuint ambientIntensity;
+    GLuint diffuseIntensity;
+};
+
+struct DirectionalLightUnform
+{
+    BaseLineUniform base;
+    GLuint direction;
+};
+
+struct AttenuationUniform
+{
+    GLuint constant;
+    GLuint linear;
+    GLuint quadratic;
+};
+
+struct PointLightUniform
+{
+    BaseLineUniform base;
+    GLuint position;
+    AttenuationUniform attenuation;
+};
 
 struct Program
 {
@@ -56,13 +110,9 @@ struct Program
     GLuint projectionMatrix;
     GLuint textureSampler;
 
-    struct 
-    {
-        GLuint color;
-        GLuint ambientIntensity;
-        GLuint diffuseIntensity;
-        GLuint direction;
-    } directionalLight;
+    DirectionalLightUnform directionalLight;
+    GLuint numPointLights;
+    PointLightUniform pointLights[MAX_POINT_LIGHTS];
 
     struct
     {
@@ -70,6 +120,7 @@ struct Program
         GLuint shiness;
     } material;
 };
+
 Program program;
 Camera camera;
 
@@ -81,7 +132,7 @@ void initProgram()
 
     glusFileLoadText("./shader.vs", &vertexSource);
     glusFileLoadText("./shader.fs", &fragmentSource);
-    glusProgramBuildFromSource(&glusProgram, const_cast<const GLUSchar **>(&vertexSource.text), 
+    glusProgramBuildFromSource(&glusProgram, const_cast<const GLUSchar **>(&vertexSource.text),
             0, 0, 0, const_cast<const GLUSchar **>(&fragmentSource.text));
     glusFileDestroyText(&vertexSource);
     glusFileDestroyText(&fragmentSource);
@@ -90,16 +141,39 @@ void initProgram()
     program.position = glGetAttribLocation(program.program, "position");
     program.texCoord = glGetAttribLocation(program.program, "texCoord");
     program.normal = glGetAttribLocation(program.program, "normal");
+
     program.modelViewMatrix = glGetUniformLocation(program.program, "modelViewMatrix");
     program.modelViewMatrixForNormal = glGetUniformLocation(program.program, "modelViewMatrixForNormal");
     program.projectionMatrix = glGetUniformLocation(program.program, "projectionMatrix");
+
     program.textureSampler = glGetUniformLocation(program.program, "textureSampler");
-    program.directionalLight.color = glGetUniformLocation(program.program, "directionalLight.base.color");
-    program.directionalLight.ambientIntensity = glGetUniformLocation(program.program, "directionalLight.base.ambientIntensity");
-    program.directionalLight.diffuseIntensity = glGetUniformLocation(program.program, "directionalLight.base.diffuseIntensity");
-    program.directionalLight.direction = glGetUniformLocation(program.program, "directionalLight.direction");
+
     program.material.specularIntensity = glGetUniformLocation(program.program, "specularIntensity");
     program.material.shiness = glGetUniformLocation(program.program, "shiness");
+
+    program.directionalLight.base.color = glGetUniformLocation(program.program, "directionalLight.base.color");
+    program.directionalLight.base.ambientIntensity = glGetUniformLocation(program.program, "directionalLight.base.ambientIntensity");
+    program.directionalLight.base.diffuseIntensity = glGetUniformLocation(program.program, "directionalLight.base.diffuseIntensity");
+    program.directionalLight.direction = glGetUniformLocation(program.program, "directionalLight.direction");
+
+    program.numPointLights = glGetUniformLocation(program.program, "numPointLights");
+    for (int i = 0; i < MAX_POINT_LIGHTS; i++) {
+        char buffer[256];
+        sprintf(buffer, "pointLights[%d].base.color", i);
+        program.pointLights[i].base.color = glGetUniformLocation(program.program, buffer);
+        sprintf(buffer, "pointLights[%d].base.ambientIntensity", i);
+        program.pointLights[i].base.ambientIntensity = glGetUniformLocation(program.program, buffer);
+        sprintf(buffer, "pointLights[%d].base.diffuseIntensity", i);
+        program.pointLights[i].base.diffuseIntensity = glGetUniformLocation(program.program, buffer);
+        sprintf(buffer, "pointLights[%d].position", i);
+        program.pointLights[i].position = glGetUniformLocation(program.program, buffer);
+        sprintf(buffer, "pointLights[%d].attenuation.constant", i);
+        program.pointLights[i].attenuation.constant = glGetUniformLocation(program.program, buffer);
+        sprintf(buffer, "pointLights[%d].attenuation.linear", i);
+        program.pointLights[i].attenuation.linear = glGetUniformLocation(program.program, buffer);
+        sprintf(buffer, "pointLights[%d].attenuation.quadratic", i);
+        program.pointLights[i].attenuation.quadratic= glGetUniformLocation(program.program, buffer);
+    }
 }
 
 void initVertexBuffers()
@@ -144,10 +218,6 @@ GLUSboolean init(GLUSvoid)
 
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
-    glFrontFace(GL_CCW);
-    glCullFace(GL_BACK);
-    glEnable(GL_CULL_FACE);
-
     glEnable(GL_DEPTH_TEST);
     glDepthMask(GL_TRUE);
 
@@ -187,14 +257,36 @@ GLUSboolean update(GLUSfloat time)
     glUniformMatrix4fv(program.projectionMatrix, 1, GL_FALSE, projectionMatrix);
 
     // directional light
-    glUniform3fv(program.directionalLight.color, 1, directionalLight.base.color);
-    glUniform1f(program.directionalLight.ambientIntensity, directionalLight.base.ambientIntensity);
-    glUniform1f(program.directionalLight.diffuseIntensity, directionalLight.base.diffuseIntensity);
-    glUniform3fv(program.directionalLight.direction, 1, directionalLight.direction);
-    
+    glUniform3fv(program.directionalLight.base.color, 1, directionalLight.base.color.value_ptr());
+    glUniform1f(program.directionalLight.base.ambientIntensity, directionalLight.base.ambientIntensity);
+    glUniform1f(program.directionalLight.base.diffuseIntensity, directionalLight.base.diffuseIntensity);
+    glUniform3fv(program.directionalLight.direction, 1, directionalLight.direction.value_ptr());
+
+    // point light
+    static float scale = 0.0f;
+    scale += 0.0057f;
+    pointLights[0].base.diffuseIntensity = 0.5f;
+    pointLights[0].base.color = {1.0f, 0.5f, 0.0f};
+    pointLights[0].position = {3.0f, 1.0f, 20.0f * (cosf(scale) + 1.0f) / 2.0f};
+    pointLights[0].attenuation.linear = 0.1f;
+    pointLights[1].base.diffuseIntensity = 0.5f;
+    pointLights[1].base.color = {0.0f, 0.5f, 1.0f};
+    pointLights[1].position = {7.0f, 1.0f, 20.0f * (sinf(scale) + 1.0f) / 2.0f};
+    pointLights[1].attenuation.linear = 0.1f;
+    glUniform1i(program.numPointLights, MAX_POINT_LIGHTS);
+    for (int i = 0; i < MAX_POINT_LIGHTS; i++) {
+        glUniform3fv(program.pointLights[i].base.color, 1, pointLights[i].base.color.value_ptr());
+        glUniform1f(program.pointLights[i].base.ambientIntensity, pointLights[i].base.ambientIntensity);
+        glUniform1f(program.pointLights[i].base.diffuseIntensity, pointLights[i].base.diffuseIntensity);
+        glUniform3fv(program.pointLights[i].position, 1, pointLights[i].position.value_ptr());
+        glUniform1f(program.pointLights[i].attenuation.constant, pointLights[i].attenuation.constant);
+        glUniform1f(program.pointLights[i].attenuation.linear, pointLights[i].attenuation.linear);
+        glUniform1f(program.pointLights[i].attenuation.quadratic, pointLights[i].attenuation.quadratic);
+    }
+
     // specular lighting
-    glUniform1f(program.material.specularIntensity, 1.0f);
-    glUniform1f(program.material.shiness, 2.0f);
+    glUniform1f(program.material.specularIntensity, 0.0f);
+    glUniform1f(program.material.shiness, 0.0f);
 
     glUniform1i(program.textureSampler, 0);
     pTexture->Bind(GL_TEXTURE0);
@@ -244,7 +336,7 @@ GLUSvoid terminate(GLUSvoid)
 
 int main(int argc, char* argv[])
 {
-    MagickCore::MagickCoreGenesis(*argv, Magick::MagickFalse);    
+    MagickCore::MagickCoreGenesis(*argv, Magick::MagickFalse);
     EGLint eglConfigAttributes[] = {
         EGL_RED_SIZE, 8,
         EGL_GREEN_SIZE, 8,
