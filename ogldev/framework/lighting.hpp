@@ -11,9 +11,8 @@ struct BaseLight
     GLfloat diffuseIntensity;
 };
 
-struct DirectionalLight
+struct DirectionalLight : public BaseLight
 {
-    BaseLight base;
     Vector3f direction;
 };
 
@@ -24,16 +23,14 @@ struct Attenuation
     GLfloat quadratic = 0.0f;
 };
 
-struct PointLight
+struct PointLight : public BaseLight
 {
-    BaseLight base;
     Vector3f position;
     Attenuation attenuation;
 };
 
-struct SpotLight
+struct SpotLight : public PointLight
 {
-    PointLight base;
     Vector3f direction;
     float cutoff;
 };
@@ -45,9 +42,8 @@ struct BaseLineUniform
     GLuint diffuseIntensity;
 };
 
-struct DirectionalLightUnform
+struct DirectionalLightUnform : public BaseLineUniform
 {
-    BaseLineUniform base;
     GLuint direction;
 };
 
@@ -58,16 +54,14 @@ struct AttenuationUniform
     GLuint quadratic;
 };
 
-struct PointLightUniform
+struct PointLightUniform : public BaseLineUniform
 {
-    BaseLineUniform base;
     GLuint position;
     AttenuationUniform attenuation;
 };
 
-struct SpotLightUniform
+struct SpotLightUniform : public PointLightUniform
 {
-    PointLightUniform base;
     GLuint direction;
     GLuint cutoff;
 };

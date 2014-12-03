@@ -25,10 +25,7 @@ const unsigned int indexData[] = {
     0, 1, 2
 };
 
-DirectionalLight directionalLight = {
-    {{1.0f, 1.0f, 1.0f}, 0.01f, 0.01f},
-    {1.0f, -1.0f, 0.0f}
-};
+DirectionalLight directionalLight;
 PointLight pointLights[MAX_POINT_LIGHTS];
 SpotLight spotLights[MAX_SPOT_LIGHTS];
 
@@ -102,6 +99,11 @@ GLUSboolean init(GLUSvoid)
     glEnable(GL_DEPTH_TEST);
     glDepthMask(GL_TRUE);
 
+    directionalLight.color = {1.0f, 1.0f, 1.0f};
+    directionalLight.ambientIntensity = 0.01f;
+    directionalLight.diffuseIntensity = 0.01f;
+    directionalLight.direction = {1.0f, -1.0f, 0.0f};
+
     return GLUS_TRUE;
 }
 
@@ -139,29 +141,29 @@ GLUSboolean update(GLUSfloat time)
     // point light
     static float scale = 0.0f;
     scale += 0.0057f;
-    pointLights[0].base.diffuseIntensity = 0.25f;
-    pointLights[0].base.color = {1.0f, 0.5f, 0.0f};
+    pointLights[0].diffuseIntensity = 0.25f;
+    pointLights[0].color = {1.0f, 0.5f, 0.0f};
     pointLights[0].position = {3.0f, 1.0f, 20.0f * (cosf(scale) + 1.0f) / 2.0f};
     pointLights[0].attenuation.linear = 0.1f;
-    pointLights[1].base.diffuseIntensity = 0.25f;
-    pointLights[1].base.color = {0.0f, 0.5f, 1.0f};
+    pointLights[1].diffuseIntensity = 0.25f;
+    pointLights[1].color = {0.0f, 0.5f, 1.0f};
     pointLights[1].position = {7.0f, 1.0f, 20.0f * (sinf(scale) + 1.0f) / 2.0f};
     pointLights[1].attenuation.linear = 0.1f;
 
     program.setPointLights(pointLights, MAX_POINT_LIGHTS);
 
     // spot light
-    spotLights[0].base.base.diffuseIntensity = 0.9f;
-    spotLights[0].base.base.color = {0.0f, 1.0f, 1.0f};
-    spotLights[0].base.position = camera.getPosition();
+    spotLights[0].diffuseIntensity = 0.9f;
+    spotLights[0].color = {0.0f, 1.0f, 1.0f};
+    spotLights[0].position = camera.getPosition();
     spotLights[0].direction = camera.getDirection();
-    spotLights[0].base.attenuation.linear = 0.1f;
+    spotLights[0].attenuation.linear = 0.1f;
     spotLights[0].cutoff = 10.0f;
-    spotLights[1].base.base.diffuseIntensity = 0.9f;
-    spotLights[1].base.base.color = {1.0f, 1.0f, 1.0f};
-    spotLights[1].base.position = {5.0f, 3.0f, 10.0f};
+    spotLights[1].diffuseIntensity = 0.9f;
+    spotLights[1].color = {1.0f, 1.0f, 1.0f};
+    spotLights[1].position = {5.0f, 3.0f, 10.0f};
     spotLights[1].direction = {0.0f, -1.0f, 0.0f};
-    spotLights[1].base.attenuation.linear = 0.1f;
+    spotLights[1].attenuation.linear = 0.1f;
     spotLights[1].cutoff = 20.0f;
    
     program.setSpotLights(spotLights, MAX_SPOT_LIGHTS); 
@@ -188,24 +190,24 @@ GLUSvoid keyboard(GLUSboolean pressed, GLUSint key)
     }
     switch (key) {
         case 'z':
-            directionalLight.base.ambientIntensity -= 0.05f;
+            directionalLight.ambientIntensity -= 0.05f;
             break;
         case 'x':
-            directionalLight.base.ambientIntensity += 0.05f;
+            directionalLight.ambientIntensity += 0.05f;
             break;
         case 'c':
-            directionalLight.base.diffuseIntensity -= 0.05f;
+            directionalLight.diffuseIntensity -= 0.05f;
             break;
         case 'v':
-            directionalLight.base.diffuseIntensity += 0.05f;
+            directionalLight.diffuseIntensity += 0.05f;
             break;
         case 'q':
             exit(0);
         default:
             break;
     }
-    directionalLight.base.ambientIntensity = glusMathClampf(directionalLight.base.ambientIntensity, 0.0f, 1.0f);
-    directionalLight.base.diffuseIntensity = glusMathClampf(directionalLight.base.diffuseIntensity, 0.0f, 1.0f);
+    directionalLight.ambientIntensity = clamp(directionalLight.ambientIntensity, 0.0f, 1.0f);
+    directionalLight.diffuseIntensity = clamp(directionalLight.diffuseIntensity, 0.0f, 1.0f);
 }
 
 GLUSvoid mouseMove(GLUSint buttons, GLUSint x, GLUSint y)
