@@ -45,7 +45,7 @@ GLUSboolean init(GLUSvoid)
     glBindVertexArray(vao);
 
     pMesh = new Mesh();
-    pMesh->LoadMesh("../Content/phoenix_ugv.md2");
+    pMesh->LoadMesh("../content/phoenix_ugv.md2");
 
     camera.setPosition(3.0f, 7.0f, -10.0f);
     camera.setDirection(0.0f, -0.2f, 1.0f);
