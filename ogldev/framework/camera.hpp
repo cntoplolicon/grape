@@ -9,9 +9,9 @@ class Camera
 {
     const float STEP = 0.1f;
 
-    GLUSfloat position[3];
-    GLUSfloat direction[3];
-    GLUSfloat up[3];
+    Vector3f position;
+    Vector3f direction;
+    Vector3f up;
 
     GLUSfloat theta = 0.0f;
     GLUSfloat phi = 0.0f;
@@ -19,52 +19,45 @@ class Camera
 public:
     Camera() 
     {
-        SetPosition(0.0f, 0.0f, 0.0f);
-        SetDirection(0.0f, 0.0f, 1.0f);
-        SetUpDireciton(0.0f, 1.0f, 0.0f);
+        setPosition(0.0f, 0.0f, 0.0f);
+        setDirection(0.0f, 0.0f, 1.0f);
+        setUpDireciton(0.0f, 1.0f, 0.0f);
     }
 
-    void SetPosition(float x, float y, float z) 
+    void setPosition(float x, float y, float z) 
     {
-        GLfloat values[] = {x, y, z};
-        std::copy(values, values + 3, position);
+        position = {x, y, z};
     }
 
-    void SetDirection(float x, float y, float z) 
+    void setDirection(float x, float y, float z) 
     {
-        GLfloat values[] = {x, y, z};
-        std::copy(values, values + 3, direction);
-        glusVector3Normalizef(direction);
+        direction = Vector3f{x, y, z}.normalized();
     }
 
-    void SetUpDireciton(float x, float y, float z) 
+    void setUpDireciton(float x, float y, float z) 
     {
-        GLfloat values[] = {x, y, z};
-        std::copy(values, values + 3, up);
-        glusVector3Normalizef(up);
+        up = Vector3f{x, y, z}.normalized();
     }
 
-    void GetMatrix(GLUSfloat *result)
+    Matrix4x4f getMatrix()
     {
-        GLfloat target[3];
-        glusVector3AddVector3f(target, position, direction);
-        glusMatrix4x4LookAtf(result, position[0], position[1], position[2], 
-                target[0], target[1], target[2], up[0], up[1], up[2]);
+        Vector3f target = position + direction;
+        return Matrix4x4f::lookAt(position, target, up);
     }
 
-    Vector3f GetPosition()
+    Vector3f getPosition()
     {
-        return {position[0], position[1], position[2]};
+        return position;
     }
 
-    Vector3f GetDirection()
+    Vector3f getDirection()
     {
-        return {direction[0], direction[1], direction[2]};
+        return direction;
     }
 
-    Vector3f GetUpDirection()
+    Vector3f getUpDirection()
     {
-        return {up[0], up[1], up[2]};
+        return up;
     }
 
     void OnKey(GLUSboolean pressed, GLUSint key) 
@@ -72,39 +65,38 @@ public:
         if (!pressed) {
             return;
         }
-        GLUSfloat step[3] = {0.0f, 0.0f, 0.0f};
+        Vector3f step = {0.0f, 0.0f, 0.0f};
         switch (key) {
             case 'w':
-                glusVector3MultiplyScalarf(step, direction, STEP);
+                step = direction * STEP;
                 break;
             case 's':
-                glusVector3MultiplyScalarf(step, direction, -STEP);
+                step = direction * -STEP;
                 break;
             case 'a':
-                glusVector3Crossf(step, direction, up);
-                glusVector3MultiplyScalarf(step, step, -STEP);
+                step = direction.cross(up);
+                step = step * -STEP;
                 break;
             case 'd':
-                glusVector3Crossf(step, direction, up);
-                glusVector3MultiplyScalarf(step, step, STEP);
+                step = direction.cross(up);
+                step = step * STEP;
                 break;
             default:
                 break;
         }
-        glusVector3AddVector3f(position, position, step);
+        position += step;
     }
 
     void UpdateDirection(GLUSint x, GLUSint y)
     {
-        GLUSfloat forward[3] = {0.0f, 0.0f, 1.0f};
+        Vector3f forward = {0.0f, 0.0f, 1.0f};
         theta += -x / 20.0f;
         phi += y / 20.0f;
-        phi = glusMathClampf(phi, -90.0f, 90.0f);
-        GLUSfloat rotation[16];
-        glusMatrix4x4Identityf(rotation);
-        glusMatrix4x4RotateRyf(rotation, theta);
-        glusMatrix4x4RotateRxf(rotation, phi);
-        glusMatrix4x4MultiplyVector3f(direction, rotation, forward);
+        phi = clamp(phi, -90.0f, 90.0f);
+        Matrix4x4f rotation = Matrix4x4f::identity();;
+        rotation = rotation.rotatey(theta);
+        rotation = rotation.rotatex(phi);
+        direction = rotation * forward;
     }
 
     void OnMouse(GLUSint buttons, GLUSint x, GLUSint y)
