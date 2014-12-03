@@ -3,6 +3,7 @@
 #include "GL/glus.h"
 #include "camera.hpp"
 #include "texture.hpp"
+#include "mesh.hpp"
 #include "lighting_program.hpp"
 
 const int MAX_POINT_LIGHTS = 2;
@@ -10,30 +11,11 @@ const int MAX_SPOT_LIGHTS = 2;
 const int WINDOW_WIDTH = 1920;
 const int WINDOW_HEIGHT = 1200;
 
-const float vertexData[] = {
-    0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-    0.0f, 0.0f, 20.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
-    10.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-    10.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-    0.0f, 0.0f, 20.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
-    10.0f, 0.0f, 20.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f
-};
-const unsigned int indexData[] = {
-    0, 3, 1,
-    1, 3, 2,
-    2, 3, 0,
-    0, 1, 2
-};
-
 DirectionalLight directionalLight;
 PointLight pointLights[MAX_POINT_LIGHTS];
 SpotLight spotLights[MAX_SPOT_LIGHTS];
 
-GLuint indexBufferObject;
-GLuint vertexBufferObject;
-GLuint vertexArrayObject;
-
-Texture* pTexture = nullptr;
+Mesh *pMesh = nullptr;
 
 LightingProgram<MAX_POINT_LIGHTS, MAX_SPOT_LIGHTS> program;
 Camera camera;
@@ -54,44 +36,19 @@ void initProgram()
     program.loadUniforms(glusProgram.program);
 }
 
-void initVertexBuffers()
-{
-    glUseProgram(program.program);
-    glGenVertexArrays(1, &vertexArrayObject);
-    glBindVertexArray(vertexArrayObject);
-
-    glGenBuffers(1, &vertexBufferObject);
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBufferObject);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertexData), vertexData, GL_STATIC_DRAW);
-
-    glGenBuffers(1, &indexBufferObject);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferObject);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indexData), indexData, GL_STATIC_DRAW);
-
-    glEnableVertexAttribArray(program.position);
-    glVertexAttribPointer(program.position, 3, GL_FLOAT, GL_FALSE, 32, 0);
-    glEnableVertexAttribArray(program.texCoord);
-    glVertexAttribPointer(program.texCoord, 2, GL_FLOAT, GL_FALSE, 32, reinterpret_cast<const GLvoid *>(12));
-    glEnableVertexAttribArray(program.normal);
-    glVertexAttribPointer(program.normal, 3, GL_FLOAT, GL_FALSE, 32, reinterpret_cast<const GLvoid *>(20));
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-    glUseProgram(0);
-
-    glDisableVertexAttribArray(program.position);
-    glDisableVertexAttribArray(program.texCoord);
-    glDisableVertexAttribArray(program.normal);
-}
-
 GLUSboolean init(GLUSvoid)
 {
     initProgram();
-    initVertexBuffers();
 
-    pTexture = new Texture(GL_TEXTURE_2D, "../content/test.png");
-    camera.setPosition(5.0f, 1.0f, -3.0f);
-    camera.setDirection(0.0f, 0.0f, 1.0f);
+    GLuint vao;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
+    pMesh = new Mesh();
+    pMesh->LoadMesh("../Content/phoenix_ugv.md2");
+
+    camera.setPosition(3.0f, 7.0f, -10.0f);
+    camera.setDirection(0.0f, -0.2f, 1.0f);
     camera.setUpDireciton(0.0, 1.0f, 0.0f);
 
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -100,7 +57,7 @@ GLUSboolean init(GLUSvoid)
     glDepthMask(GL_TRUE);
 
     directionalLight.color = {1.0f, 1.0f, 1.0f};
-    directionalLight.ambientIntensity = 0.01f;
+    directionalLight.ambientIntensity = 1.0f;
     directionalLight.diffuseIntensity = 0.01f;
     directionalLight.direction = {1.0f, -1.0f, 0.0f};
 
@@ -117,11 +74,14 @@ GLUSboolean update(GLUSfloat time)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glUseProgram(program.program);
-    glBindVertexArray(vertexArrayObject);
 
     // model view
+    static float m_scale = 0.0f;
+    m_scale += 0.01f;
     Matrix4x4f modelViewMatrix = Matrix4x4f::identity();
-    modelViewMatrix = modelViewMatrix.translate({0.0f, 0.0f, 1.0f});
+    modelViewMatrix = modelViewMatrix.translate({0.0f, 0.0f, 10.0f});
+    modelViewMatrix = modelViewMatrix.rotatey(m_scale);
+    modelViewMatrix = modelViewMatrix.scale({0.1f, 0.1f, 0.1f});
     Matrix4x4f viewMatrix = camera.getMatrix();
     modelViewMatrix = viewMatrix * modelViewMatrix;
     glUniformMatrix4fv(program.modelViewMatrix, 1, GL_FALSE, modelViewMatrix.const_value_ptr());
@@ -159,24 +119,18 @@ GLUSboolean update(GLUSfloat time)
     spotLights[0].direction = camera.getDirection();
     spotLights[0].attenuation.linear = 0.1f;
     spotLights[0].cutoff = 10.0f;
-    spotLights[1].diffuseIntensity = 0.9f;
-    spotLights[1].color = {1.0f, 1.0f, 1.0f};
-    spotLights[1].position = {5.0f, 3.0f, 10.0f};
-    spotLights[1].direction = {0.0f, -1.0f, 0.0f};
-    spotLights[1].attenuation.linear = 0.1f;
-    spotLights[1].cutoff = 20.0f;
    
-    program.setSpotLights(spotLights, MAX_SPOT_LIGHTS); 
+    program.setSpotLights(spotLights, 1); 
 
     // specular lighting
     glUniform1f(program.specular.specularIntensity, 0.0f);
     glUniform1f(program.specular.shiness, 0.0f);
 
+    // texture
     glUniform1i(program.textureSampler, 0);
-    pTexture->Bind(GL_TEXTURE0);
 
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-    glBindVertexArray(0);
+    pMesh->Render();
+
     glUseProgram(0);
 
     return GLUS_TRUE;
@@ -217,7 +171,7 @@ GLUSvoid mouseMove(GLUSint buttons, GLUSint x, GLUSint y)
 
 GLUSvoid terminate(GLUSvoid)
 {
-    delete pTexture;
+    delete pMesh;
 }
 
 int main(int argc, char* argv[])

@@ -1,5 +1,5 @@
-#ifndef __MATH__H__
-#define __MATH__H__
+#ifndef __MATH_3D_H__
+#define __MATH_3D_H__
 
 #include "GL/glus.h"
 

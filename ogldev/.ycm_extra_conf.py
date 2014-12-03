@@ -88,7 +88,8 @@ flags = [
 pkg_config_command = [
 'pkg-config',
 '--cflags',
-'ImageMagick++'
+'ImageMagick++',
+'assimp'
 ]
 
 flags += subprocess.check_output(pkg_config_command).strip().split(' ')
