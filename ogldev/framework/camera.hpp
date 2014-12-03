@@ -60,7 +60,7 @@ public:
         return up;
     }
 
-    void OnKey(GLUSboolean pressed, GLUSint key) 
+    void onKey(GLUSboolean pressed, GLUSint key) 
     {
         if (!pressed) {
             return;
@@ -87,7 +87,7 @@ public:
         position += step;
     }
 
-    void UpdateDirection(GLUSint x, GLUSint y)
+    void updateDirection(GLUSint x, GLUSint y)
     {
         Vector3f forward = {0.0f, 0.0f, 1.0f};
         theta += -x / 20.0f;
@@ -99,12 +99,12 @@ public:
         direction = rotation * forward;
     }
 
-    void OnMouse(GLUSint buttons, GLUSint x, GLUSint y)
+    void onMouse(GLUSint buttons, GLUSint x, GLUSint y)
     {
         static bool initialized = false;
         static GLUSint mouseX, mouseY;
         if (initialized) {
-            UpdateDirection(x - mouseX, y - mouseY);
+            updateDirection(x - mouseX, y - mouseY);
         }
         initialized = true;
         mouseX = x;

@@ -182,7 +182,7 @@ GLUSboolean update(GLUSfloat time)
 
 GLUSvoid keyboard(GLUSboolean pressed, GLUSint key)
 {
-    camera.OnKey(pressed, key);
+    camera.onKey(pressed, key);
     if (!pressed) {
         return;
     }
@@ -199,6 +199,8 @@ GLUSvoid keyboard(GLUSboolean pressed, GLUSint key)
         case 'v':
             directionalLight.base.diffuseIntensity += 0.05f;
             break;
+        case 'q':
+            exit(0);
         default:
             break;
     }
@@ -208,7 +210,7 @@ GLUSvoid keyboard(GLUSboolean pressed, GLUSint key)
 
 GLUSvoid mouseMove(GLUSint buttons, GLUSint x, GLUSint y)
 {
-    camera.OnMouse(buttons, x, y);
+    camera.onMouse(buttons, x, y);
 }
 
 GLUSvoid terminate(GLUSvoid)
