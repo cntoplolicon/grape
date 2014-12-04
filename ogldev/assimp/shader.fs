@@ -65,6 +65,7 @@ vec4 LightContribute(BaseLight light, vec3 lightDireciton)
     vec3 refectDirection = normalize(reflect(lightDireciton, normal));
     float specularFactor = pow(dot(viewDirection, refectDirection), shiness);
     specularFactor = cosIncidence == 0.0 ? 0.0 : specularFactor;
+    specularFactor = max(0.0, specularFactor);
     return color * light.ambientIntensity + 
         color * cosIncidence * light.diffuseIntensity +
         color * specularFactor * specularIntensity;
