@@ -13,10 +13,12 @@ public:
     GLuint position;
     GLuint texCoord;
     GLuint normal;
+    GLuint tangent;
     GLuint modelViewMatrix;
     GLuint modelViewMatrixForNormal;
     GLuint projectionMatrix;
     GLuint textureSampler;
+    GLuint normalSampler;
 
     DirectionalLightUnform directionalLight;
     GLuint numPointLights;
@@ -31,12 +33,14 @@ public:
         position = glGetAttribLocation(program, "position");
         texCoord = glGetAttribLocation(program, "texCoord");
         normal = glGetAttribLocation(program, "normal");
+        tangent = glGetAttribLocation(program, "tangent");
 
         modelViewMatrix = glGetUniformLocation(program, "modelViewMatrix");
         modelViewMatrixForNormal = glGetUniformLocation(program, "modelViewMatrixForNormal");
         projectionMatrix = glGetUniformLocation(program, "projectionMatrix");
 
         textureSampler = glGetUniformLocation(program, "textureSampler");
+        normalSampler = glGetUniformLocation(program, "normalSampler");
 
         specular.specularIntensity = glGetUniformLocation(program, "specularIntensity");
         specular.shiness = glGetUniformLocation(program, "shiness");

@@ -14,6 +14,9 @@ DirectionalLight directionalLight;
 LightingProgram<0, 0> program;
 Camera camera;
 Mesh *pMesh;
+Texture *pNormalMap;
+Texture *pNormalFlat;
+bool useNormalMap;
 
 void initProgram()
 {
@@ -41,6 +44,9 @@ GLUSboolean init(GLUSvoid)
 
     pMesh = new Mesh();
     pMesh->LoadMesh("../content/box.obj");
+    pNormalMap = new Texture(GL_TEXTURE_2D, "../content/normal_map.jpg");
+    pNormalFlat = new Texture(GL_TEXTURE_2D, "../content/normal_up.jpg");
+    useNormalMap = true;
 
     camera.setPosition(0.5f, 1.025f, 0.25f);
     camera.setDirection(0.0f, -0.5f, 1.0f);
@@ -98,6 +104,9 @@ GLUSboolean update(GLUSfloat time)
 
     // texture
     glUniform1i(program.textureSampler, 0);
+    glUniform1i(program.normalSampler, 2);
+    Texture *normalTexture = useNormalMap ? pNormalMap : pNormalFlat;
+    normalTexture->Bind(GL_TEXTURE2);
 
     pMesh->Render();
 
@@ -124,6 +133,9 @@ GLUSvoid keyboard(GLUSboolean pressed, GLUSint key)
             break;
         case 'v':
             directionalLight.diffuseIntensity += 0.05f;
+            break;
+        case 'b':
+            useNormalMap = !useNormalMap;
             break;
         case 'q':
             exit(0);
