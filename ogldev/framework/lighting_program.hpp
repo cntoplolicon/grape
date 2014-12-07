@@ -10,10 +10,6 @@ class LightingProgram
 {
 public:
     GLuint program;
-    GLuint position;
-    GLuint texCoord;
-    GLuint normal;
-    GLuint tangent;
     GLuint modelViewMatrix;
     GLuint modelViewMatrixForNormal;
     GLuint projectionMatrix;
@@ -30,10 +26,6 @@ public:
     void loadUniforms(GLuint program)
     {
         this->program = program;
-        position = glGetAttribLocation(program, "position");
-        texCoord = glGetAttribLocation(program, "texCoord");
-        normal = glGetAttribLocation(program, "normal");
-        tangent = glGetAttribLocation(program, "tangent");
 
         modelViewMatrix = glGetUniformLocation(program, "modelViewMatrix");
         modelViewMatrixForNormal = glGetUniformLocation(program, "modelViewMatrixForNormal");
