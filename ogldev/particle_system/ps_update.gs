@@ -81,8 +81,7 @@ void main()
                      EndPrimitive();
                 }
             }
-        }
-        else {
+        } else {
             if (age < secondShellLifetime) {
                 type1 = PARTICLE_TYPE_SECONDARY_SHELL;
                 position1 = position0[0] + deltaPosition;

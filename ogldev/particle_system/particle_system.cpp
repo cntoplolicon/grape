@@ -38,7 +38,7 @@ struct Particle
     float lifetime;
 };
 int currVB = 0;
-int currTFB = 0;
+int currTFB = 1;
 bool isfirst = true;
 
 void initParticleSystem()
@@ -102,10 +102,11 @@ void initParticleUpdateProgram()
     glusFileLoadText("./ps_update.fs", &fragmentSource);
     glusProgramCreateFromSource(&glusProgram, const_cast<const GLUSchar **>(&vertexSource.text),
             0, 0, const_cast<const GLUSchar **>(&geometrySource.text), const_cast<const GLUSchar **>(&fragmentSource.text));
-    const GLchar* Varyings[4] = {"type1", "position1", "velocity1", "age1"}; 
-    glTransformFeedbackVaryings(glusProgram.program, 4, Varyings, GL_INTERLEAVED_ATTRIBS);
+    const GLchar* varyings[4] = {"type1", "position1", "velocity1", "age1"};
+    glTransformFeedbackVaryings(glusProgram.program, 4, varyings, GL_INTERLEAVED_ATTRIBS);
     glusProgramLink(&glusProgram);
     glusFileDestroyText(&vertexSource);
+    glusFileDestroyText(&geometrySource);
     glusFileDestroyText(&fragmentSource);
 
     particleUpdateProgram.loadUniforms(glusProgram.program);
@@ -116,6 +117,7 @@ GLUSboolean init(GLUSvoid)
     initLightingProgram();
     initParticleUpdateProgram();
     initBillbardProgram();
+    initParticleSystem();
 
     GLuint vao;
     glGenVertexArrays(1, &vao);
@@ -140,6 +142,7 @@ GLUSboolean init(GLUSvoid)
     directionalLight.ambientIntensity = 0.2f;
     directionalLight.diffuseIntensity = 0.8f;
 
+    assert(glGetError() == GL_NO_ERROR);
     return GLUS_TRUE;
 }
 
@@ -151,6 +154,8 @@ GLUSvoid reshape(GLUSint width, GLUSint height)
 void renderGround()
 {
     glUseProgram(lightingProgram.program);
+
+    glDisable(GL_RASTERIZER_DISCARD);
 
     // model view
     Matrix4x4f modelViewMatrix = Matrix4x4f::identity();
@@ -193,42 +198,58 @@ void updateParticles(GLUSfloat deltaTime)
     static GLUSfloat time = 0.0f;
     time += deltaTime;
 
+    assert(glGetError() == GL_NO_ERROR);
     glUseProgram(particleUpdateProgram.program);
 
+    assert(glGetError() == GL_NO_ERROR);
+    glEnable(GL_RASTERIZER_DISCARD);
+
+    assert(glGetError() == GL_NO_ERROR);
     particleUpdateProgram.setTime(deltaTime, time);
     particleUpdateProgram.setLifetime(100.0f, 10000.0f, 2500.0f);
 
+    assert(glGetError() == GL_NO_ERROR);
     glUniform1i(particleUpdateProgram.randomTextureSampler, 1);
     pRandomTexture->Bind(GL_TEXTURE1);
 
-    glEnable(GL_RASTERIZER_DISCARD);
-
+    assert(glGetError() == GL_NO_ERROR);
     glBindBuffer(GL_ARRAY_BUFFER, vertexBuffers[currVB]); 
     glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, transformFeedbacks[currTFB]);
 
+    assert(glGetError() == GL_NO_ERROR);
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
     glEnableVertexAttribArray(2);
     glEnableVertexAttribArray(3);
 
+    assert(glGetError() == GL_NO_ERROR);
     glVertexAttribPointer(0, 1, GL_FLOAT, GL_FALSE, sizeof(Particle), 0); // type
+    assert(glGetError() == GL_NO_ERROR);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Particle), (const GLvoid*)4); // position
+    assert(glGetError() == GL_NO_ERROR);
     glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Particle), (const GLvoid*)16); // velocity
+    assert(glGetError() == GL_NO_ERROR);
     glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, sizeof(Particle), (const GLvoid*)28); // lifetime
 
+    assert(glGetError() == GL_NO_ERROR);
     glBeginTransformFeedback(GL_POINTS);
     if (isfirst) {
         glDrawArrays(GL_POINTS, 0, 1);
+        assert(glGetError() == GL_NO_ERROR);
         isfirst = false;
     } else {
+        assert(glGetError() == GL_NO_ERROR);
         glDrawTransformFeedback(GL_POINTS, transformFeedbacks[currVB]);
+        assert(glGetError() == GL_NO_ERROR);
     } 
     glEndTransformFeedback();
+    assert(glGetError() == GL_NO_ERROR);
 
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
     glDisableVertexAttribArray(2);
     glDisableVertexAttribArray(3);
+    assert(glGetError() == GL_NO_ERROR);
 
     glUseProgram(0);
 }
@@ -258,7 +279,9 @@ GLUSboolean update(GLUSfloat deltaTime)
 
     renderGround();
     updateParticles(deltaTime);
+    assert(glGetError() == GL_NO_ERROR);
     renderParticles();
+    assert(glGetError() == GL_NO_ERROR);
 
     currVB = 1 - currVB;
     currTFB = 1 - currTFB;
