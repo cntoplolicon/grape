@@ -25,6 +25,7 @@ Camera camera;
 Mesh *pGroundMesh = nullptr;
 Texture *pNormalMap = nullptr;
 Texture *pTexture = nullptr;
+Texture *pBillboardTexture = nullptr;
 RandomTexture *pRandomTexture = nullptr;
 DirectionalLight directionalLight;
 GLuint transformFeedbacks[2];
@@ -77,14 +78,17 @@ void initLightingProgram()
 void initBillbardProgram()
 {
     GLUStextfile vertexSource;
+    GLUStextfile geometrySource;
     GLUStextfile fragmentSource;
     GLUSprogram glusProgram;
 
     glusFileLoadText("./billboard.vs", &vertexSource);
+    glusFileLoadText("./billboard.gs", &geometrySource);
     glusFileLoadText("./billboard.fs", &fragmentSource);
     glusProgramBuildFromSource(&glusProgram, const_cast<const GLUSchar **>(&vertexSource.text),
-            0, 0, 0, const_cast<const GLUSchar **>(&fragmentSource.text));
+            0, 0, const_cast<const GLUSchar **>(&geometrySource.text), const_cast<const GLUSchar **>(&fragmentSource.text));
     glusFileDestroyText(&vertexSource);
+    glusFileDestroyText(&geometrySource);
     glusFileDestroyText(&fragmentSource);
 
     billboardProgram.loadUniforms(glusProgram.program);
@@ -127,6 +131,7 @@ GLUSboolean init(GLUSvoid)
     pGroundMesh->LoadMesh("quad.obj");
     pTexture = new Texture(GL_TEXTURE_2D, "../content/bricks.jpg");
     pNormalMap = new Texture(GL_TEXTURE_2D, "../content/normal_map.jpg");
+    pBillboardTexture = new Texture(GL_TEXTURE_2D, "../content/fireworks_red.jpg");
     pRandomTexture = new RandomTexture(RANDOM_TEXTURE_SIZE);
 
     camera.setPosition(0.0f, 0.4f, -0.5f);
@@ -264,6 +269,9 @@ void renderParticles()
     glUniformMatrix4fv(billboardProgram.modelViewMatrix, 1, GL_FALSE, camera.getMatrix().const_value_ptr());
     Matrix4x4f projectionMatrix = Matrix4x4f::perspective(60.0f, (GLUSfloat)WINDOW_WIDTH / (GLUSfloat)WINDOW_HEIGHT, 1.0f, 100.0f);
     glUniformMatrix4fv(billboardProgram.projectionMatrix, 1, GL_FALSE, projectionMatrix.const_value_ptr());
+    glUniform1f(billboardProgram.billboardSize, 0.01f);
+    glUniform1i(billboardProgram.billboardSampler, 0);
+    pBillboardTexture->Bind(GL_TEXTURE0);
 
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Particle), (const GLvoid*)4); // position
