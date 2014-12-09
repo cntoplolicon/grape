@@ -23,7 +23,7 @@ public:
     SpotLightUniform spotLights[MAX_SPOT_LIGHTS];
     SpecularUniform specular;
 
-    void loadUniforms(GLuint program)
+    virtual void loadUniforms(GLuint program)
     {
         this->program = program;
 
