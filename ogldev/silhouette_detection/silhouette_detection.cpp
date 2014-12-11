@@ -14,15 +14,17 @@ struct SilhouetteProgram
     GLuint program;
 
     GLuint modelViewMatrix;
+    GLuint viewMatrix;
     GLuint projectionMatrix;
-    GLuint cameraSpaceLightPosition;
+    GLuint lightPosition;
 
     void loadUniforms(GLuint program)
     {
         this->program = program;
         modelViewMatrix = glGetUniformLocation(program, "modelViewMatrix");
+        viewMatrix = glGetUniformLocation(program, "viewMatrix");
         projectionMatrix = glGetUniformLocation(program, "projectionMatrix");
-        cameraSpaceLightPosition = glGetUniformLocation(program, "cameraSpaceLightPosition");
+        lightPosition = glGetUniformLocation(program, "lightPosition");
     }
 };
 
@@ -73,10 +75,6 @@ GLUSboolean init(GLUSvoid)
     initLightingProgram();
     initSilhouetteProgram();
 
-    GLuint vao;
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-
     pMesh = new Mesh();
     pMesh->LoadMesh("../content/box.obj", true);
 
@@ -88,6 +86,7 @@ GLUSboolean init(GLUSvoid)
 
     glEnable(GL_DEPTH_TEST);
     glDepthMask(GL_TRUE);
+    glDepthFunc(GL_LEQUAL);
 
     directionalLight.color = {1.0f, 1.0f, 1.0f};
     directionalLight.ambientIntensity = 0.55f;
@@ -110,21 +109,22 @@ GLUSboolean update(GLUSfloat time)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    Matrix4x4f modelMatrix = Matrix4x4f::identity();
+    modelMatrix = modelMatrix.translate({0.0f, 2.0f, 0.0f});
+    Matrix4x4f viewMatrix = camera.getMatrix();
+    Matrix4x4f modelViewMatrix = viewMatrix * modelMatrix;
+    Matrix4x4f projectionMatrix = Matrix4x4f::perspective(60.0f, (GLUSfloat)WINDOW_WIDTH / (GLUSfloat)WINDOW_HEIGHT, 1.0f, 100.0f);
+    Matrix4x4f modelViewMatrixForNormal = modelViewMatrix.inverse().transpose();
+
     glUseProgram(program.program);
 
     // model view
-    Matrix4x4f modelViewMatrix = Matrix4x4f::identity();
-    modelViewMatrix = modelViewMatrix.translate({0.0f, 2.0f, 0.0f});
-    Matrix4x4f viewMatrix = camera.getMatrix();
-    modelViewMatrix = viewMatrix * modelViewMatrix;
     glUniformMatrix4fv(program.modelViewMatrix, 1, GL_FALSE, modelViewMatrix.const_value_ptr());
 
     // model view for normal
-    modelViewMatrix = modelViewMatrix.inverse().transpose();
-    glUniformMatrix4fv(program.modelViewMatrixForNormal, 1, GL_FALSE, modelViewMatrix.const_value_ptr());
+    glUniformMatrix4fv(program.modelViewMatrixForNormal, 1, GL_FALSE, modelViewMatrixForNormal.const_value_ptr());
 
     // projection
-    Matrix4x4f projectionMatrix = Matrix4x4f::perspective(60.0f, (GLUSfloat)WINDOW_WIDTH / (GLUSfloat)WINDOW_HEIGHT, 1.0f, 100.0f);
     glUniformMatrix4fv(program.projectionMatrix, 1, GL_FALSE, projectionMatrix.const_value_ptr());
 
     // lighting
@@ -142,19 +142,17 @@ GLUSboolean update(GLUSfloat time)
 
     glUseProgram(0);
 
-    // silhouette program
     glUseProgram(silhouetteProgram.program);
 
-    // modelview
+    // model view
     glUniformMatrix4fv(silhouetteProgram.modelViewMatrix, 1, GL_FALSE, modelViewMatrix.const_value_ptr());
+    glUniformMatrix4fv(silhouetteProgram.viewMatrix, 1, GL_FALSE, viewMatrix.const_value_ptr());
 
     // projection
     glUniformMatrix4fv(silhouetteProgram.projectionMatrix, 1, GL_FALSE, projectionMatrix.const_value_ptr());
 
     // light position
-    glUniform3fv(silhouetteProgram.cameraSpaceLightPosition, 1, (modelViewMatrix * Vector3f{0.0f, 10.0f, 0.0f}).const_value_ptr());
-
-    glLineWidth(5.0f);
+    glUniform3fv(silhouetteProgram.lightPosition, 1, Vector3f{0.0f, 10.0f, 0.0f}.const_value_ptr());
 
     pMesh->Render();
 

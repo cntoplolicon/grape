@@ -78,10 +78,10 @@ struct Neighbors
     
     void AddNeigbor(uint n)
     {
-        if (n1 == -1) {
+        if (n1 == (uint)-1) {
             n1 = n;
         }
-        else if (n2 == -1) {
+        else if (n2 == (uint)-1) {
             n2 = n;
         }
         else {
@@ -412,7 +412,7 @@ void Mesh::FindAdjacencies(const aiMesh* paiMesh, vector<unsigned int>& Indices)
             Neighbors n = m_indexMap[e];
             uint OtherTri = n.GetOther(i);
             
-            assert(OtherTri != -1);
+            assert(OtherTri != (uint)-1);
 
             const Face& OtherFace = m_uniqueFaces[OtherTri];
             uint OppositeIndex = OtherFace.GetOppositeIndex(e);

@@ -5,7 +5,8 @@ layout (line_strip, max_vertices = 6) out;
 
 in vec3 cameraSpacePosition[];
 
-uniform vec3 cameraSpaceLightPosition;
+uniform vec3 lightPosition;
+uniform mat4 viewMatrix;
 
 void EmitLine(int i, int j)
 {
@@ -20,6 +21,8 @@ void EmitLine(int i, int j)
 
 void main()
 {
+    vec3 cameraSpaceLightPosition = (viewMatrix * vec4(lightPosition, 1.0)).xyz;
+
     vec3 e1 = cameraSpacePosition[2] - cameraSpacePosition[0];
     vec3 e2 = cameraSpacePosition[4] - cameraSpacePosition[0];
     vec3 e3 = cameraSpacePosition[1] - cameraSpacePosition[0];
@@ -27,7 +30,7 @@ void main()
     vec3 e5 = cameraSpacePosition[4] - cameraSpacePosition[2];
     vec3 e6 = cameraSpacePosition[5] - cameraSpacePosition[0];
 
-    vec3 normal = cross(e1,e2);
+    vec3 normal = cross(e1, e2);
     vec3 lightDirection = cameraSpaceLightPosition - cameraSpacePosition[0];
 
     if (dot(normal, lightDirection) > 0.00001) {
