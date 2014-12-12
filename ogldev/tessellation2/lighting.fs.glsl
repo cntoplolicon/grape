@@ -43,24 +43,23 @@ struct SpotLight
     float cutoff;
 }; 
 
-uniform mat4 modelViewMatrix;
+uniform mat4 viewMatrix;
 uniform float specularIntensity;
 uniform float shiness;
 uniform sampler2D textureSampler;
-uniform sampler2D normalSampler;
 uniform DirectionalLight directionalLight;
 uniform int numPointLights;
 uniform PointLight pointLights[MAX_POINT_LIGHTS];
 uniform int numSpotLights;
 uniform SpotLight spotLights[MAX_SPOT_LIGHTS];
 
-vec4 LightContribute(BaseLight light, vec3 lightDireciton, vec3 normal)
+vec4 LightContribute(BaseLight light, vec3 lightDirection, vec3 normal)
 {
     vec4 color = vec4(light.color, 1.0);
-    float cosIncidence = dot(-lightDireciton, normal);
+    float cosIncidence = dot(-lightDirection, normal);
     cosIncidence = clamp(cosIncidence, 0.0, 1.0);
-    vec3 viewDirection = normalize(- position_fs_in);
-    vec3 refectDirection = normalize(reflect(lightDireciton, normal));
+    vec3 viewDirection = normalize(-position_fs_in);
+    vec3 refectDirection = normalize(reflect(lightDirection, normal));
     float specularFactor = pow(dot(viewDirection, refectDirection), shiness);
     specularFactor = cosIncidence == 0.0 ? 0.0 : specularFactor;
     specularFactor = max(0.0, specularFactor);
@@ -71,12 +70,13 @@ vec4 LightContribute(BaseLight light, vec3 lightDireciton, vec3 normal)
 
 vec4 DirectionalLightContribute(DirectionalLight light, vec3 normal)
 {
-    return LightContribute(light.base, normalize(light.direction), normal);
+    vec3 lightDirection = (viewMatrix * vec4(light.direction, 0.0)).xyz;
+    return LightContribute(light.base, normalize(lightDirection), normal);
 }
 
 vec4 PointLightContribute(PointLight light, vec3 normal)
 {
-    vec3 cameraSpaceLightPos = (modelViewMatrix * vec4(light.position, 1.0)).xyz;
+    vec3 cameraSpaceLightPos = (viewMatrix * vec4(light.position, 1.0)).xyz;
     vec3 direction = position_fs_in - cameraSpaceLightPos;
     float dist = length(direction);
     float attenuation = light.attenuation.constant + light.attenuation.linear * dist +
@@ -86,9 +86,9 @@ vec4 PointLightContribute(PointLight light, vec3 normal)
 
 vec4 SpotLightContribute(SpotLight light, vec3 normal)
 {
-    vec3 cameraSpaceLightPos = (modelViewMatrix * vec4(light.base.position, 1.0)).xyz;
+    vec3 cameraSpaceLightPos = (viewMatrix * vec4(light.base.position, 1.0)).xyz;
     vec3 direction = normalize(position_fs_in - cameraSpaceLightPos);
-    vec3 cameraSpaceLightDir = normalize((modelViewMatrix * vec4(light.direction, 0.0)).xyz);
+    vec3 cameraSpaceLightDir = normalize((viewMatrix * vec4(light.direction, 0.0)).xyz);
     vec4 color = PointLightContribute(light.base, normal);
 
     float spotFactor = dot(direction, cameraSpaceLightDir);

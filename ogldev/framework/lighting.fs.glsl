@@ -53,16 +53,16 @@ uniform PointLight pointLights[MAX_POINT_LIGHTS];
 uniform int numSpotLights;
 uniform SpotLight spotLights[MAX_SPOT_LIGHTS];
 
-vec4 LightContribute(BaseLight light, vec3 lightDireciton)
+vec4 LightContribute(BaseLight light, vec3 lightDirection)
 {
     vec3 normal = normalize(cameraSpaceNormal);
-    lightDireciton = normalize(lightDireciton);
+    lightDirection = normalize(lightDirection);
 
     vec4 color = vec4(light.color, 1.0);
-    float cosIncidence = dot(-lightDireciton, normal);
+    float cosIncidence = dot(-lightDirection, normal);
     cosIncidence = clamp(cosIncidence, 0.0, 1.0);
     vec3 viewDirection = normalize(-cameraSpacePosition);
-    vec3 refectDirection = normalize(reflect(lightDireciton, normal));
+    vec3 refectDirection = normalize(reflect(lightDirection, normal));
     float specularFactor = pow(dot(viewDirection, refectDirection), shiness);
     specularFactor = cosIncidence == 0.0 ? 0.0 : specularFactor;
     specularFactor = max(0.0, specularFactor);
@@ -73,7 +73,8 @@ vec4 LightContribute(BaseLight light, vec3 lightDireciton)
 
 vec4 DirectionalLightContribute(DirectionalLight light)
 {
-    return LightContribute(light.base, light.direction);
+    vec3 lightDirection = (viewMatrix * vec4(light.direction, 0.0)).xyz;
+    return LightContribute(light.base, lightDirection);
 }
 
 vec4 PointLightContribute(PointLight light)

@@ -59,8 +59,8 @@ void initLightingProgram()
     GLUStextfile fragmentSource;
     GLUSprogram glusProgram;
 
-    glusFileLoadText("./lighting.vs.glsl", &vertexSource);
-    glusFileLoadText("./lighting.fs.glsl", &fragmentSource);
+    glusFileLoadText("../framework/lighting.vs.glsl", &vertexSource);
+    glusFileLoadText("../framework/lighting.fs.glsl", &fragmentSource);
     glusProgramBuildFromSource(&glusProgram, const_cast<const GLUSchar **>(&vertexSource.text),
             0, 0, 0, const_cast<const GLUSchar **>(&fragmentSource.text));
     glusFileDestroyText(&vertexSource);

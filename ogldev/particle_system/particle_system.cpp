@@ -65,8 +65,8 @@ void initLightingProgram()
     GLUStextfile fragmentSource;
     GLUSprogram glusProgram;
 
-    glusFileLoadText("./lighiing.vs", &vertexSource);
-    glusFileLoadText("./lighting.fs", &fragmentSource);
+    glusFileLoadText("../framework/lighting.vs.glsl", &vertexSource);
+    glusFileLoadText("../framework/lighting.fs.glsl", &fragmentSource);
     glusProgramBuildFromSource(&glusProgram, const_cast<const GLUSchar **>(&vertexSource.text),
             0, 0, 0, const_cast<const GLUSchar **>(&fragmentSource.text));
     glusFileDestroyText(&vertexSource);
@@ -146,6 +146,7 @@ GLUSboolean init(GLUSvoid)
     directionalLight.color = {1.0f, 1.0f, 1.0f};
     directionalLight.ambientIntensity = 0.2f;
     directionalLight.diffuseIntensity = 0.8f;
+    directionalLight.direction = {1.0f, 0.0f, 0.0f};
 
     assert(glGetError() == GL_NO_ERROR);
     return GLUS_TRUE;
@@ -169,6 +170,7 @@ void renderGround()
     Matrix4x4f viewMatrix = camera.getMatrix();
     modelViewMatrix = viewMatrix * modelViewMatrix;
     glUniformMatrix4fv(lightingProgram.modelViewMatrix, 1, GL_FALSE, modelViewMatrix.const_value_ptr());
+    glUniformMatrix4fv(lightingProgram.viewMatrix, 1, GL_FALSE, viewMatrix.const_value_ptr());
 
     // model view for normal
     modelViewMatrix = modelViewMatrix.inverse().transpose();
@@ -179,7 +181,6 @@ void renderGround()
     glUniformMatrix4fv(lightingProgram.projectionMatrix, 1, GL_FALSE, projectionMatrix.const_value_ptr());
 
     // lighing
-    directionalLight.direction = viewMatrix * Vector3f{1.0f, 0.0f, 0.0f};
     lightingProgram.setDirectionalLight(directionalLight);
     lightingProgram.setPointLights(nullptr, 0);
     lightingProgram.setSpotLights(nullptr, 0); 

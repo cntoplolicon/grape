@@ -26,8 +26,8 @@ void initProgram()
     GLUStextfile fragmentSource;
     GLUSprogram glusProgram;
 
-    glusFileLoadText("./shader.vs", &vertexSource);
-    glusFileLoadText("./shader.fs", &fragmentSource);
+    glusFileLoadText("../framework/lighting.vs.glsl", &vertexSource);
+    glusFileLoadText("../framework/lighting.fs.glsl", &fragmentSource);
     glusProgramBuildFromSource(&glusProgram, const_cast<const GLUSchar **>(&vertexSource.text),
             0, 0, 0, const_cast<const GLUSchar **>(&fragmentSource.text));
     glusFileDestroyText(&vertexSource);
@@ -85,6 +85,7 @@ GLUSboolean update(GLUSfloat time)
     Matrix4x4f viewMatrix = camera.getMatrix();
     modelViewMatrix = viewMatrix * modelViewMatrix;
     glUniformMatrix4fv(program.modelViewMatrix, 1, GL_FALSE, modelViewMatrix.const_value_ptr());
+    glUniformMatrix4fv(program.viewMatrix, 1, GL_FALSE, viewMatrix.const_value_ptr());
 
     // model view for normal
     modelViewMatrix = modelViewMatrix.inverse().transpose();
