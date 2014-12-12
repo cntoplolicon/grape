@@ -10,6 +10,7 @@ class LightingProgram
 {
 public:
     GLuint program;
+    GLuint viewMatrix;
     GLuint modelViewMatrix;
     GLuint modelViewMatrixForNormal;
     GLuint projectionMatrix;
@@ -28,6 +29,7 @@ public:
         this->program = program;
 
         modelViewMatrix = glGetUniformLocation(program, "modelViewMatrix");
+        viewMatrix = glGetUniformLocation(program, "viewMatrix");
         modelViewMatrixForNormal = glGetUniformLocation(program, "modelViewMatrixForNormal");
         projectionMatrix = glGetUniformLocation(program, "projectionMatrix");
 
