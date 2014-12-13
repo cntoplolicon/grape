@@ -389,12 +389,9 @@ void renderStencilPass(const PointLight &light)
      * object is outside of the light volume */
     glStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
 
-    glUseProgram(pointLightPass.program);
+    glUseProgram(stencilPass.program);
 
-    pointLightPass.bindUniforms();
-    pointLightPass.pointLight.setPointLight(light);
-
-    renderLightVolume(pointLightPass, light);
+    renderLightVolume(stencilPass, light);
 
     glUseProgram(0);
 }
@@ -483,11 +480,10 @@ int main(int argc, char* argv[])
     };
 
     EGLint eglContextAttributes[] = {
-        EGL_CONTEXT_MAJOR_VERSION, 4,
-        EGL_CONTEXT_MINOR_VERSION, 3,
+        EGL_CONTEXT_MAJOR_VERSION, 3,
+        EGL_CONTEXT_MINOR_VERSION, 2,
         EGL_CONTEXT_OPENGL_FORWARD_COMPATIBLE, EGL_TRUE,
         EGL_CONTEXT_OPENGL_PROFILE_MASK, EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT,
-        EGL_CONTEXT_OPENGL_DEBUG, EGL_TRUE,
         EGL_NONE
     };
 
