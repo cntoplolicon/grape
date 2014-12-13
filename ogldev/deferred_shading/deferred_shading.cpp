@@ -66,7 +66,7 @@ struct LightPass : public MVPPipeline
     void bindUniforms()
     {
         glUniform1i(positionSampler, GBuffer::GBUFFER_TEXTURE_TYPE_POSITION);
-        glUniform1i(colorSampler, GBuffer::GBUFFER_TEXTURE_TYPE_DIFFUSE);
+        glUniform1i(colorSampler, GBuffer::GBUFFER_TEXTURE_TYPE_COLOR);
         glUniform1i(normalSampler, GBuffer::GBUFFER_TEXTURE_TYPE_NORMAL);
         glUniform1f(specularIntensity, 0.0f);
         glUniform1f(shiness, 0.0f);
@@ -193,6 +193,7 @@ GLUSboolean init(GLUSvoid)
     pGBuffer = new GBuffer(WINDOW_WIDTH, WINDOW_HEIGHT);
 
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glEnable(GL_CULL_FACE);
 
     return GLUS_TRUE;
 }
@@ -224,7 +225,7 @@ void renderGeometryPass()
     glUniformMatrix4fv(geometryPass.projectionMatrix, 1, GL_FALSE, projectionMatrix.const_value_ptr());
 
     glUniform1i(geometryPass.textureSampler, 0);
-    for (int i = 0; i < sizeof(boxPositions) / sizeof(boxPositions[0]); i++) {
+    for (unsigned int i = 0; i < sizeof(boxPositions) / sizeof(boxPositions[0]); i++) {
         Matrix4x4f modelMatrix = Matrix4x4f::identity().translate(boxPositions[i]).rotatey(m_scale);
         glUniformMatrix4fv(geometryPass.modelMatrix, 1, GL_FALSE, modelMatrix.const_value_ptr());
         pBoxMesh->Render();
@@ -251,7 +252,7 @@ void renderDirectionalLightPass()
     glUseProgram(directionalLightPass.program);
 
     Matrix4x4f identity = Matrix4x4f::identity();
-    glUniformMatrix4fv(directionalLightPass.modelMatrix, 1, GL_FALSE, identity.const_value_ptr());
+    glUniformMatrix4fv(directionalLightPass.modelMatrix, 1, GL_FALSE, identity.rotatey(180.0f).const_value_ptr());
     glUniformMatrix4fv(directionalLightPass.viewMatrix, 1, GL_FALSE, identity.const_value_ptr());
     glUniformMatrix4fv(directionalLightPass.projectionMatrix, 1, GL_FALSE, identity.const_value_ptr());
 

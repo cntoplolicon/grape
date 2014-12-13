@@ -9,7 +9,7 @@ class GBuffer
     public:
         enum GBUFFER_TEXTURE_TYPE {
             GBUFFER_TEXTURE_TYPE_POSITION,
-            GBUFFER_TEXTURE_TYPE_DIFFUSE,
+            GBUFFER_TEXTURE_TYPE_COLOR,
             GBUFFER_TEXTURE_TYPE_NORMAL,
             GBUFFER_NUM_TEXTURES
         };
@@ -22,7 +22,7 @@ class GBuffer
             glGenTextures(GBUFFER_NUM_TEXTURES, textures);
             glGenTextures(1, &depthTexture);
 
-            GLenum drawBuffers[] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3}; 
+            GLenum drawBuffers[] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2}; 
             for (int i = 0; i < GBUFFER_NUM_TEXTURES; i++) {
                 glBindTexture(GL_TEXTURE_2D, textures[i]);
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, windowWidth, windowHeight, 0, GL_RGB, GL_FLOAT, NULL);
@@ -59,13 +59,8 @@ class GBuffer
 
         void bindForReading()
         {
-            glBindFramebuffer(GL_READ_FRAMEBUFFER, fbo);
-        }
-
-        void setReadBuffer(GBUFFER_TEXTURE_TYPE textureType)
-        {
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-            for (int i = 0 ; i < GBUFFER_NUM_TEXTURES; i++) {
+            for (int i = 0; i < GBUFFER_NUM_TEXTURES; i++) {
                 glActiveTexture(GL_TEXTURE0 + i);		
                 glBindTexture(GL_TEXTURE_2D, textures[i]);
             }

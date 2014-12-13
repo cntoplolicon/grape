@@ -2,7 +2,6 @@
 
 struct BaseLight
 {
-
     vec3 color;
     float ambientIntensity;                                                         
     float diffuseIntensity;                                                         
@@ -14,9 +13,9 @@ struct DirectionalLight
     vec3 direction;                                                                 
 };
 
-uniform sampler2D positionSampler;
 uniform sampler2D colorSampler;
 uniform sampler2D normalSampler;
+uniform sampler2D positionSampler;
 uniform mat4 viewMatrix;
 uniform DirectionalLight directionalLight;
 uniform float specularIntensity;
