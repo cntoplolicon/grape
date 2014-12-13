@@ -10,7 +10,6 @@
 const int WINDOW_WIDTH = 1280;
 const int WINDOW_HEIGHT = 1024;
 
-//const Vector3f COLOR_WHITE = {1.0f, 1.0f, 1.0f};
 const Vector3f COLOR_RED = {1.0f, 0.0f, 0.0f};
 const Vector3f COLOR_GREEN = {0.0f, 1.0f, 0.0f};
 const Vector3f COLOR_CYAN = {0.0f, 1.0f, 1.0f};
@@ -116,8 +115,17 @@ struct PointLightPass : public LightPass
     }
 };
 
+struct StencilPass : public MVPPipeline
+{
+    void loadUniforms(GLuint program)
+    {
+        MVPPipeline::loadUniforms(program);
+    }
+};
+
 GeometryPass geometryPass;
 DirectionalLightPass directionalLightPass;
+StencilPass stencilPass;
 PointLightPass pointLightPass;
 
 Vector3f boxPositions[5];
@@ -143,7 +151,6 @@ void initLights()
     pointLights[0].diffuseIntensity = 0.2f;
     pointLights[0].color = COLOR_GREEN;
     pointLights[0].position = {0.0f, 1.5f, 5.0f};
-    pointLights[0].attenuation.constant = 0.0f;
     pointLights[0].attenuation.constant = 1.0f;
     pointLights[0].attenuation.linear = 0.0f;
     pointLights[0].attenuation.quadratic = 0.3f;
@@ -151,7 +158,6 @@ void initLights()
     pointLights[1].diffuseIntensity = 0.2f;
     pointLights[1].color = COLOR_RED;
     pointLights[1].position = {2.0f, 0.0f, 5.0f};
-    pointLights[1].attenuation.constant = 0.0f;
     pointLights[1].attenuation.constant = 1.0f;
     pointLights[1].attenuation.linear = 0.0f;
     pointLights[1].attenuation.quadratic = 0.3f;
@@ -159,7 +165,6 @@ void initLights()
     pointLights[2].diffuseIntensity = 0.2f;
     pointLights[2].color = COLOR_BLUE;
     pointLights[2].position = {0.0f, 0.0f, 3.0f};
-    pointLights[2].attenuation.constant = 0.0f;
     pointLights[2].attenuation.constant = 1.0f;
     pointLights[2].attenuation.linear = 0.0f;
     pointLights[2].attenuation.quadratic = 0.3f;
@@ -197,6 +202,22 @@ void initDirectionalLightPass()
     directionalLightPass.loadUniforms(glusProgram.program);
 }
 
+void initStencilPass()
+{
+    GLUStextfile vertexSource;
+    GLUStextfile fragmentSource;
+    GLUSprogram glusProgram;
+
+    glusFileLoadText("./light_pass.vs", &vertexSource);
+    glusFileLoadText("./empty.fs", &fragmentSource);
+    glusProgramBuildFromSource(&glusProgram, const_cast<const GLUSchar **>(&vertexSource.text),
+            0, 0, 0, const_cast<const GLUSchar **>(&fragmentSource.text));
+    glusFileDestroyText(&vertexSource);
+    glusFileDestroyText(&fragmentSource);
+
+    stencilPass.loadUniforms(glusProgram.program);
+}
+
 void initPointLightPass()
 {
     GLUStextfile vertexSource;
@@ -219,6 +240,7 @@ GLUSboolean init(GLUSvoid)
     initLights();
     initGeometryPass();
     initDirectionalLightPass();
+    initStencilPass();
     initPointLightPass();
 
     GLuint vao;
@@ -235,7 +257,7 @@ GLUSboolean init(GLUSvoid)
     pGBuffer = new GBuffer(WINDOW_WIDTH, WINDOW_HEIGHT);
 
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-    glEnable(GL_CULL_FACE);
+    glEnable(GL_STENCIL_TEST);
 
     return GLUS_TRUE;
 }
@@ -250,9 +272,13 @@ void renderGeometryPass()
     static float m_scale = 0.0f;
     m_scale += 0.05f;
 
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
     glEnable(GL_DEPTH_TEST);
     glDepthMask(GL_TRUE);
     glDisable(GL_BLEND);
+    glStencilFunc(GL_ALWAYS, 0, 0xff);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
     pGBuffer->bindForWriting();
 
@@ -291,10 +317,11 @@ void beginLightPasses()
 
 void renderDirectionalLightPass()
 {
+    glCullFace(GL_FRONT);
     glUseProgram(directionalLightPass.program);
 
     Matrix4x4f identity = Matrix4x4f::identity();
-    glUniformMatrix4fv(directionalLightPass.modelMatrix, 1, GL_FALSE, identity.rotatey(180.0f).const_value_ptr());
+    glUniformMatrix4fv(directionalLightPass.modelMatrix, 1, GL_FALSE, identity.const_value_ptr());
     glUniformMatrix4fv(directionalLightPass.viewMatrix, 1, GL_FALSE, identity.const_value_ptr());
     glUniformMatrix4fv(directionalLightPass.projectionMatrix, 1, GL_FALSE, identity.const_value_ptr());
 
@@ -318,27 +345,66 @@ float calcPointLightScale(const PointLight& light)
     return ret;
 }
 
-void renderPointLightPass()
+void renderLightVolume(const MVPPipeline &program, const PointLight &light)
 {
-    glUseProgram(pointLightPass.program);
+    Matrix4x4f modelMatrix = Matrix4x4f::identity();
+    modelMatrix = modelMatrix.translate(light.position);
+    float scale = calcPointLightScale(light);
+    modelMatrix = modelMatrix.scale({scale, scale, scale});
+    glUniformMatrix4fv(program.modelMatrix, 1, GL_FALSE, modelMatrix.const_value_ptr());
+
     Matrix4x4f viewMatrix = camera.getMatrix();
-    glUniformMatrix4fv(pointLightPass.viewMatrix, 1, GL_FALSE, viewMatrix.const_value_ptr());
+    glUniformMatrix4fv(program.viewMatrix, 1, GL_FALSE, viewMatrix.const_value_ptr());
 
     Matrix4x4f projectionMatrix = Matrix4x4f::perspective(60.0f, WINDOW_WIDTH * 1.0f / WINDOW_HEIGHT, 1.0f, 100.0f);
-    glUniformMatrix4fv(pointLightPass.projectionMatrix, 1, GL_FALSE, projectionMatrix.const_value_ptr());
+    glUniformMatrix4fv(program.projectionMatrix, 1, GL_FALSE, projectionMatrix.const_value_ptr());
 
-    pointLightPass.bindUniforms();
-    for (size_t i = 0; i < sizeof(pointLights) / sizeof(pointLights[0]); i++) {
-        pointLightPass.pointLight.setPointLight(pointLights[i]);
-        Matrix4x4f modelMatrix = Matrix4x4f::identity();
-        modelMatrix = modelMatrix.translate(pointLights[i].position);
-        float scale = calcPointLightScale(pointLights[i]);
-        modelMatrix = modelMatrix.scale({scale, scale, scale});
-        glUniformMatrix4fv(pointLightPass.modelMatrix, 1, GL_FALSE, modelMatrix.const_value_ptr());
-        pSphereMesh->Render();
-    }
+    pSphereMesh->Render();
+}
+
+void renderStencilPass(const PointLight &light)
+{
+    glClear(GL_STENCIL_BUFFER_BIT);
+    glDisable(GL_CULL_FACE);
+    glStencilFunc(GL_ALWAYS, 0, 0xff);
+    glEnable(GL_DEPTH_TEST);
+
+    glStencilOpSeparate(GL_BACK, GL_KEEP, GL_INCR_WRAP, GL_KEEP);
+    glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_DECR_WRAP, GL_KEEP);
+
+    glUseProgram(stencilPass.program);
+
+    renderLightVolume(stencilPass, light);
 
     glUseProgram(0);
+
+    glEnable(GL_CULL_FACE);
+    glDisable(GL_DEPTH_TEST);
+}
+
+void renderPointLightPass(const PointLight &light)
+{
+    glStencilFunc(GL_NOTEQUAL, 0, 0xff);
+
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_FRONT);
+
+    glUseProgram(pointLightPass.program);
+
+    pointLightPass.bindUniforms();
+    pointLightPass.pointLight.setPointLight(light);
+
+    renderLightVolume(pointLightPass, light);
+
+    glUseProgram(0);
+}
+
+void renderPointLights()
+{
+    for (size_t i = 0; i < sizeof(pointLights) / sizeof(pointLights[0]); i++) {
+        renderStencilPass(pointLights[i]);
+        renderPointLightPass(pointLights[i]);        
+    }
 }
 
 GLUSboolean update(GLUSfloat time)
@@ -346,7 +412,7 @@ GLUSboolean update(GLUSfloat time)
     renderGeometryPass(); 
     beginLightPasses();
     renderDirectionalLightPass();
-    renderPointLightPass();
+    renderPointLights();
 
     return GLUS_TRUE;
 }
@@ -386,16 +452,17 @@ int main(int argc, char* argv[])
         EGL_GREEN_SIZE, 8,
         EGL_BLUE_SIZE, 8,
         EGL_DEPTH_SIZE, 8,
-        EGL_STENCIL_SIZE, 0,
+        EGL_STENCIL_SIZE, 8,
         EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
         EGL_NONE
     };
 
     EGLint eglContextAttributes[] = {
-        EGL_CONTEXT_MAJOR_VERSION, 3,
-        EGL_CONTEXT_MINOR_VERSION, 2,
+        EGL_CONTEXT_MAJOR_VERSION, 4,
+        EGL_CONTEXT_MINOR_VERSION, 3,
         EGL_CONTEXT_OPENGL_FORWARD_COMPATIBLE, EGL_TRUE,
         EGL_CONTEXT_OPENGL_PROFILE_MASK, EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT,
+        EGL_CONTEXT_OPENGL_DEBUG, EGL_TRUE,
         EGL_NONE
     };
 
