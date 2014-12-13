@@ -144,6 +144,7 @@ void initLights()
     pointLights[0].color = COLOR_GREEN;
     pointLights[0].position = {0.0f, 1.5f, 5.0f};
     pointLights[0].attenuation.constant = 0.0f;
+    pointLights[0].attenuation.constant = 1.0f;
     pointLights[0].attenuation.linear = 0.0f;
     pointLights[0].attenuation.quadratic = 0.3f;
 
@@ -151,6 +152,7 @@ void initLights()
     pointLights[1].color = COLOR_RED;
     pointLights[1].position = {2.0f, 0.0f, 5.0f};
     pointLights[1].attenuation.constant = 0.0f;
+    pointLights[1].attenuation.constant = 1.0f;
     pointLights[1].attenuation.linear = 0.0f;
     pointLights[1].attenuation.quadratic = 0.3f;
 
@@ -158,6 +160,7 @@ void initLights()
     pointLights[2].color = COLOR_BLUE;
     pointLights[2].position = {0.0f, 0.0f, 3.0f};
     pointLights[2].attenuation.constant = 0.0f;
+    pointLights[2].attenuation.constant = 1.0f;
     pointLights[2].attenuation.linear = 0.0f;
     pointLights[2].attenuation.quadratic = 0.3f;
 }
@@ -307,7 +310,8 @@ float calcPointLightScale(const PointLight& light)
 {
     float maxChannel = fmax(fmax(light.color.x, light.color.y), light.color.z);
 
-    float ret = (-light.attenuation.linear + sqrtf(light.attenuation.linear * light.attenuation.linear - 4 * light.attenuation.quadratic * (light.attenuation.quadratic - 256 * maxChannel * light.diffuseIntensity))) 
+    float ret = (-light.attenuation.linear + sqrtf(light.attenuation.linear * light.attenuation.linear -
+                4 * light.attenuation.quadratic * (light.attenuation.constant - 256 * maxChannel * light.diffuseIntensity)))
         /
         2 * light.attenuation.quadratic;
 
@@ -341,7 +345,7 @@ GLUSboolean update(GLUSfloat time)
 {
     renderGeometryPass(); 
     beginLightPasses();
-    //renderDirectionalLightPass();
+    renderDirectionalLightPass();
     renderPointLightPass();
 
     return GLUS_TRUE;
