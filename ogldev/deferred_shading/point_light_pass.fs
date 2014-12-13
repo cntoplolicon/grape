@@ -57,7 +57,7 @@ vec4 PointLightContribute(PointLight light, vec3 cameraSpacePosition, vec3 camer
     float dist = length(direction);
     float attenuation = light.attenuation.constant + light.attenuation.linear * dist +
         light.attenuation.quadratic * dist * dist;
-    //return LightContribute(light.base, direction, cameraSpacePosition, cameraSpaceNormal) / attenuation;
+    // disable attenuation in order to test the problems of non-stencil deferred shading
     return LightContribute(light.base, direction, cameraSpacePosition, cameraSpaceNormal);
 }
 

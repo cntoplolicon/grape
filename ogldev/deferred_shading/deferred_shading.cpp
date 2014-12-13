@@ -132,6 +132,8 @@ Vector3f boxPositions[5];
 PointLight pointLights[3];
 DirectionalLight directionalLight;
 
+float m_scale = 0.0f;
+
 void initBoxPositions()
 {
     boxPositions[0] = {0.0f, 0.0f, 5.0f};
@@ -267,21 +269,8 @@ GLUSvoid reshape(GLUSint width, GLUSint height)
     glViewport(0, 0, width, height);
 }
 
-void renderGeometryPass()
+void renderScene()
 {
-    static float m_scale = 0.0f;
-    m_scale += 0.05f;
-
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
-    glEnable(GL_DEPTH_TEST);
-    glDepthMask(GL_TRUE);
-    glDisable(GL_BLEND);
-    glStencilFunc(GL_ALWAYS, 0, 0xff);
-    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-
-    pGBuffer->bindForWriting();
-
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glUseProgram(geometryPass.program);
@@ -300,9 +289,27 @@ void renderGeometryPass()
     }
 
     glUseProgram(0);
+}
 
-    glDisable(GL_DEPTH_TEST);
-    glDepthMask(GL_FALSE);
+void renderGeometryPass()
+{
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_TRUE);
+    glDisable(GL_BLEND);
+    glStencilFunc(GL_ALWAYS, 0, 0xff);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+
+    pGBuffer->bindForWriting();
+
+    renderScene(); 
+}
+
+void renderDepthPass()
+{
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    renderScene();
 }
 
 void beginLightPasses()
@@ -317,6 +324,8 @@ void beginLightPasses()
 
 void renderDirectionalLightPass()
 {
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
     glCullFace(GL_FRONT);
     glUseProgram(directionalLightPass.program);
 
@@ -364,30 +373,39 @@ void renderLightVolume(const MVPPipeline &program, const PointLight &light)
 
 void renderStencilPass(const PointLight &light)
 {
+    glDrawBuffer(GL_NONE);
+
     glClear(GL_STENCIL_BUFFER_BIT);
-    glDisable(GL_CULL_FACE);
     glStencilFunc(GL_ALWAYS, 0, 0xff);
     glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
 
-    glStencilOpSeparate(GL_BACK, GL_KEEP, GL_INCR_WRAP, GL_KEEP);
-    glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_DECR_WRAP, GL_KEEP);
+    /* No need to render the front face and distingush front and back face
+     * like stencil shadow volumn. The reason is that if the front face is
+     * behind the object (thus the object is outside of the light volumn),
+     * although the stencil buffer will have none-zero value, the light has
+     * no contribution to the color of the object because the light is behind
+     * it. It is not the case if you don't want ambient lighting when the
+     * object is outside of the light volume */
+    glStencilOp(GL_KEEP, GL_INCR, GL_KEEP);
 
-    glUseProgram(stencilPass.program);
+    glUseProgram(pointLightPass.program);
 
-    renderLightVolume(stencilPass, light);
+    pointLightPass.bindUniforms();
+    pointLightPass.pointLight.setPointLight(light);
+
+    renderLightVolume(pointLightPass, light);
 
     glUseProgram(0);
-
-    glEnable(GL_CULL_FACE);
-    glDisable(GL_DEPTH_TEST);
 }
 
 void renderPointLightPass(const PointLight &light)
 {
-    glStencilFunc(GL_NOTEQUAL, 0, 0xff);
+    glDrawBuffer(GL_BACK);
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
 
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_FRONT);
+    glStencilFunc(GL_NOTEQUAL, 0, 0xff);
 
     glUseProgram(pointLightPass.program);
 
@@ -401,6 +419,8 @@ void renderPointLightPass(const PointLight &light)
 
 void renderPointLights()
 {
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_FRONT);
     for (size_t i = 0; i < sizeof(pointLights) / sizeof(pointLights[0]); i++) {
         renderStencilPass(pointLights[i]);
         renderPointLightPass(pointLights[i]);        
@@ -409,7 +429,12 @@ void renderPointLights()
 
 GLUSboolean update(GLUSfloat time)
 {
+    m_scale += 0.05f;
     renderGeometryPass(); 
+    /* Render the scene again to populate the depth buffer.
+     * Can optimized because the value of depths are already
+     * written in the gbuffer fbo */
+    renderDepthPass();
     beginLightPasses();
     renderDirectionalLightPass();
     renderPointLights();
