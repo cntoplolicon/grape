@@ -16,7 +16,7 @@ struct DirectionalLight
 uniform sampler2D colorSampler;
 uniform sampler2D normalSampler;
 uniform sampler2D positionSampler;
-uniform mat4 viewMatrix;
+uniform mat4 cameraMatrix;
 uniform DirectionalLight directionalLight;
 uniform float specularIntensity;
 uniform float shiness;
@@ -44,7 +44,7 @@ vec4 LightContribute(BaseLight light, vec3 lightDirection, vec3 cameraSpacePosit
 
 vec4 DirectionalLightContribute(DirectionalLight light, vec3 cameraSpacePosition, vec3 cameraSpaceNormal)
 {
-    vec3 lightDirection = (viewMatrix * vec4(light.direction, 0.0)).xyz;
+    vec3 lightDirection = (cameraMatrix * vec4(light.direction, 0.0)).xyz;
     return LightContribute(light.base, lightDirection, cameraSpacePosition, cameraSpaceNormal);
 }
 

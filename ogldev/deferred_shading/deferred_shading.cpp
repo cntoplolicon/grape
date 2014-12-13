@@ -16,6 +16,12 @@ const Vector3f COLOR_GREEN = {0.0f, 1.0f, 0.0f};
 const Vector3f COLOR_CYAN = {0.0f, 1.0f, 1.0f};
 const Vector3f COLOR_BLUE = {0.0f, 0.0f, 1.0f};
 
+Mesh *pBoxMesh;
+Mesh *pQuadMesh;
+Mesh *pSphereMesh;
+GBuffer *pGBuffer;
+Camera camera;
+
 struct MVPPipeline
 {
     GLuint program;
@@ -48,6 +54,7 @@ struct LightPass : public MVPPipeline
     GLuint positionSampler;
     GLuint colorSampler;
     GLuint normalSampler;
+    GLuint cameraMatrix;
     GLuint screenSize;
     GLuint specularIntensity;
     GLuint shiness;
@@ -58,6 +65,7 @@ struct LightPass : public MVPPipeline
         positionSampler = glGetUniformLocation(program, "positionSampler");
         colorSampler = glGetUniformLocation(program, "colorSampler");
         normalSampler = glGetUniformLocation(program, "normalSampler");
+        cameraMatrix = glGetUniformLocation(program, "cameraMatrix");
         screenSize = glGetUniformLocation(program, "screenSize");
         specularIntensity = glGetUniformLocation(program, "specularIntensity");
         shiness = glGetUniformLocation(program, "shiness");
@@ -68,6 +76,7 @@ struct LightPass : public MVPPipeline
         glUniform1i(positionSampler, GBuffer::GBUFFER_TEXTURE_TYPE_POSITION);
         glUniform1i(colorSampler, GBuffer::GBUFFER_TEXTURE_TYPE_COLOR);
         glUniform1i(normalSampler, GBuffer::GBUFFER_TEXTURE_TYPE_NORMAL);
+        glUniformMatrix4fv(cameraMatrix, 1, GL_FALSE, camera.getMatrix().const_value_ptr());
         glUniform1f(specularIntensity, 0.0f);
         glUniform1f(shiness, 0.0f);
 
@@ -92,11 +101,6 @@ struct DirectionalLightPass : public LightPass
 
 GeometryPass geometryPass;
 DirectionalLightPass directionalLightPass;
-Mesh *pBoxMesh;
-Mesh *pQuadMesh;
-Mesh *pSphereMesh;
-GBuffer *pGBuffer;
-Camera camera;
 
 Vector3f boxPositions[5];
 PointLight pointLights[3];
@@ -257,6 +261,7 @@ void renderDirectionalLightPass()
     glUniformMatrix4fv(directionalLightPass.projectionMatrix, 1, GL_FALSE, identity.const_value_ptr());
 
     directionalLightPass.bindUniforms();
+    directionalLightPass.directionalLight.setDirectionalLight(directionalLight);
 
     pQuadMesh->Render();
 
