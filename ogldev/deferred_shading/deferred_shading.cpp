@@ -99,8 +99,26 @@ struct DirectionalLightPass : public LightPass
     }
 };
 
+struct PointLightPass : public LightPass
+{
+    PointLightUniform pointLight;
+
+    void loadUniforms(GLuint program)
+    {
+        LightPass::loadUniforms(program);
+        pointLight.color = glGetUniformLocation(program, "pointLight.base.color");
+        pointLight.ambientIntensity = glGetUniformLocation(program, "pointLight.base.ambientIntensity");
+        pointLight.diffuseIntensity = glGetUniformLocation(program, "pointLight.base.diffuseIntensity");
+        pointLight.position = glGetUniformLocation(program, "pointLight.position");
+        pointLight.attenuation.constant = glGetUniformLocation(program, "pointLight.attenuation.constant");
+        pointLight.attenuation.linear = glGetUniformLocation(program, "pointLight.attenuation.linear");
+        pointLight.attenuation.quadratic= glGetUniformLocation(program, "pointLight.attenuation.quadratic");
+    }
+};
+
 GeometryPass geometryPass;
 DirectionalLightPass directionalLightPass;
+PointLightPass pointLightPass;
 
 Vector3f boxPositions[5];
 PointLight pointLights[3];
@@ -176,12 +194,29 @@ void initDirectionalLightPass()
     directionalLightPass.loadUniforms(glusProgram.program);
 }
 
+void initPointLightPass()
+{
+    GLUStextfile vertexSource;
+    GLUStextfile fragmentSource;
+    GLUSprogram glusProgram;
+
+    glusFileLoadText("./light_pass.vs", &vertexSource);
+    glusFileLoadText("./point_light_pass.fs", &fragmentSource);
+    glusProgramBuildFromSource(&glusProgram, const_cast<const GLUSchar **>(&vertexSource.text),
+            0, 0, 0, const_cast<const GLUSchar **>(&fragmentSource.text));
+    glusFileDestroyText(&vertexSource);
+    glusFileDestroyText(&fragmentSource);
+
+    pointLightPass.loadUniforms(glusProgram.program);
+}
+
 GLUSboolean init(GLUSvoid)
 {
     initBoxPositions();
     initLights();
     initGeometryPass();
     initDirectionalLightPass();
+    initPointLightPass();
 
     GLuint vao;
     glGenVertexArrays(1, &vao);
@@ -229,7 +264,7 @@ void renderGeometryPass()
     glUniformMatrix4fv(geometryPass.projectionMatrix, 1, GL_FALSE, projectionMatrix.const_value_ptr());
 
     glUniform1i(geometryPass.textureSampler, 0);
-    for (unsigned int i = 0; i < sizeof(boxPositions) / sizeof(boxPositions[0]); i++) {
+    for (size_t i = 0; i < sizeof(boxPositions) / sizeof(boxPositions[0]); i++) {
         Matrix4x4f modelMatrix = Matrix4x4f::identity().translate(boxPositions[i]).rotatey(m_scale);
         glUniformMatrix4fv(geometryPass.modelMatrix, 1, GL_FALSE, modelMatrix.const_value_ptr());
         pBoxMesh->Render();
@@ -268,11 +303,46 @@ void renderDirectionalLightPass()
     glUseProgram(0);
 }
 
+float calcPointLightScale(const PointLight& light)
+{
+    float maxChannel = fmax(fmax(light.color.x, light.color.y), light.color.z);
+
+    float ret = (-light.attenuation.linear + sqrtf(light.attenuation.linear * light.attenuation.linear - 4 * light.attenuation.quadratic * (light.attenuation.quadratic - 256 * maxChannel * light.diffuseIntensity))) 
+        /
+        2 * light.attenuation.quadratic;
+
+    return ret;
+}
+
+void renderPointLightPass()
+{
+    glUseProgram(pointLightPass.program);
+    Matrix4x4f viewMatrix = camera.getMatrix();
+    glUniformMatrix4fv(pointLightPass.viewMatrix, 1, GL_FALSE, viewMatrix.const_value_ptr());
+
+    Matrix4x4f projectionMatrix = Matrix4x4f::perspective(60.0f, WINDOW_WIDTH * 1.0f / WINDOW_HEIGHT, 1.0f, 100.0f);
+    glUniformMatrix4fv(pointLightPass.projectionMatrix, 1, GL_FALSE, projectionMatrix.const_value_ptr());
+
+    pointLightPass.bindUniforms();
+    for (size_t i = 0; i < sizeof(pointLights) / sizeof(pointLights[0]); i++) {
+        pointLightPass.pointLight.setPointLight(pointLights[i]);
+        Matrix4x4f modelMatrix = Matrix4x4f::identity();
+        modelMatrix = modelMatrix.translate(pointLights[i].position);
+        float scale = calcPointLightScale(pointLights[i]);
+        modelMatrix = modelMatrix.scale({scale, scale, scale});
+        glUniformMatrix4fv(pointLightPass.modelMatrix, 1, GL_FALSE, modelMatrix.const_value_ptr());
+        pSphereMesh->Render();
+    }
+
+    glUseProgram(0);
+}
+
 GLUSboolean update(GLUSfloat time)
 {
     renderGeometryPass(); 
     beginLightPasses();
-    renderDirectionalLightPass();
+    //renderDirectionalLightPass();
+    renderPointLightPass();
 
     return GLUS_TRUE;
 }
