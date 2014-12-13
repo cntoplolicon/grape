@@ -88,23 +88,14 @@ public:
 
     void setDirectionalLight(const DirectionalLight &light) const
     {
-        glUniform3fv(this->directionalLight.color, 1, light.color.const_value_ptr());
-        glUniform1f(this->directionalLight.ambientIntensity, light.ambientIntensity);
-        glUniform1f(this->directionalLight.diffuseIntensity, light.diffuseIntensity);
-        glUniform3fv(this->directionalLight.direction, 1, light.direction.const_value_ptr());
+        this->directionalLight.setDirectionalLight(light);
     }
 
     void setPointLights(const PointLight *lights, int n) const
     {
         glUniform1i(this->numPointLights, n);
         for (int i = 0; i < n; i++) {
-            glUniform3fv(this->pointLights[i].color, 1, lights[i].color.const_value_ptr());
-            glUniform1f(this->pointLights[i].ambientIntensity, lights[i].ambientIntensity);
-            glUniform1f(this->pointLights[i].diffuseIntensity, lights[i].diffuseIntensity);
-            glUniform3fv(this->pointLights[i].position, 1, lights[i].position.const_value_ptr());
-            glUniform1f(this->pointLights[i].attenuation.constant, lights[i].attenuation.constant);
-            glUniform1f(this->pointLights[i].attenuation.linear, lights[i].attenuation.linear);
-            glUniform1f(this->pointLights[i].attenuation.quadratic, lights[i].attenuation.quadratic);
+            pointLights[i].setPointLight(lights[i]);
         }
     }
 
@@ -112,15 +103,7 @@ public:
     {
         glUniform1i(this->numSpotLights, n);
         for (int i = 0; i < n; i++) {
-            glUniform3fv(this->spotLights[i].color, 1, lights[i].color.const_value_ptr());
-            glUniform1f(this->spotLights[i].ambientIntensity, lights[i].ambientIntensity);
-            glUniform1f(this->spotLights[i].diffuseIntensity, lights[i].diffuseIntensity);
-            glUniform3fv(this->spotLights[i].position, 1, lights[i].position.const_value_ptr());
-            glUniform1f(this->spotLights[i].attenuation.constant, lights[i].attenuation.constant);
-            glUniform1f(this->spotLights[i].attenuation.linear, lights[i].attenuation.linear);
-            glUniform1f(this->spotLights[i].attenuation.quadratic, lights[i].attenuation.quadratic);
-            glUniform3fv(this->spotLights[i].direction, 1, lights[i].direction.const_value_ptr());
-            glUniform1f(this->spotLights[i].cutoff, lights[i].cutoff);
+            spotLights[i].setSpotLight(lights[i]);
         }
     }
 };

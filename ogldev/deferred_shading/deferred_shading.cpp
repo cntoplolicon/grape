@@ -5,7 +5,7 @@
 #include "texture.hpp"
 #include "mesh.hpp"
 #include "gbuffer.hpp"
-#include "lighting.hpp"
+#include "lighting_program.hpp"
 
 const int WINDOW_WIDTH = 1280;
 const int WINDOW_HEIGHT = 1024;
@@ -16,25 +16,82 @@ const Vector3f COLOR_GREEN = {0.0f, 1.0f, 0.0f};
 const Vector3f COLOR_CYAN = {0.0f, 1.0f, 1.0f};
 const Vector3f COLOR_BLUE = {0.0f, 0.0f, 1.0f};
 
-struct GeometryPass
+struct MVPPipeline
 {
     GLuint program;
     GLuint modelMatrix;
     GLuint viewMatrix;
     GLuint projectionMatrix;
-    GLuint textureSampler;
 
-    void loadUniforms(GLuint program)
+    virtual void loadUniforms(GLuint program)
     {
         this->program = program;
         modelMatrix = glGetUniformLocation(program, "modelMatrix");
         viewMatrix = glGetUniformLocation(program, "viewMatrix");
         projectionMatrix = glGetUniformLocation(program, "projectionMatrix");
+    }
+};
+
+struct GeometryPass : public MVPPipeline
+{
+    GLuint textureSampler;
+
+    virtual void loadUniforms(GLuint program)
+    {
+        MVPPipeline::loadUniforms(program);
         textureSampler = glGetUniformLocation(program, "textureSampler");
     }
 };
 
+struct LightPass : public MVPPipeline
+{
+    GLuint positionSampler;
+    GLuint colorSampler;
+    GLuint normalSampler;
+    GLuint screenSize;
+    GLuint specularIntensity;
+    GLuint shiness;
+
+    virtual void loadUniforms(GLuint program)
+    {
+        MVPPipeline::loadUniforms(program);
+        positionSampler = glGetUniformLocation(program, "positionSampler");
+        colorSampler = glGetUniformLocation(program, "colorSampler");
+        normalSampler = glGetUniformLocation(program, "normalSampler");
+        screenSize = glGetUniformLocation(program, "screenSize");
+        specularIntensity = glGetUniformLocation(program, "specularIntensity");
+        shiness = glGetUniformLocation(program, "shiness");
+    }
+
+    void bindUniforms()
+    {
+        glUniform1i(positionSampler, GBuffer::GBUFFER_TEXTURE_TYPE_POSITION);
+        glUniform1i(colorSampler, GBuffer::GBUFFER_TEXTURE_TYPE_DIFFUSE);
+        glUniform1i(normalSampler, GBuffer::GBUFFER_TEXTURE_TYPE_NORMAL);
+        glUniform1f(specularIntensity, 0.0f);
+        glUniform1f(shiness, 0.0f);
+
+        GLfloat screen[] = {WINDOW_WIDTH, WINDOW_HEIGHT};
+        glUniform2fv(screenSize, 1, screen);
+    }
+};
+
+struct DirectionalLightPass : public LightPass
+{
+    DirectionalLightUnform directionalLight;
+
+    virtual void loadUniforms(GLuint program)
+    {
+        LightPass::loadUniforms(program);
+        directionalLight.color = glGetUniformLocation(program, "directionalLight.base.color");
+        directionalLight.ambientIntensity = glGetUniformLocation(program, "directionalLight.base.ambientIntensity");
+        directionalLight.diffuseIntensity = glGetUniformLocation(program, "directionalLight.base.diffuseIntensity");
+        directionalLight.direction = glGetUniformLocation(program, "directionalLight.direction");
+    }
+};
+
 GeometryPass geometryPass;
+DirectionalLightPass directionalLightPass;
 Mesh *pBoxMesh;
 Mesh *pQuadMesh;
 Mesh *pSphereMesh;
@@ -43,7 +100,7 @@ Camera camera;
 
 Vector3f boxPositions[5];
 PointLight pointLights[3];
-DirectionalLight directionLight;
+DirectionalLight directionalLight;
 
 void initBoxPositions()
 {
@@ -56,10 +113,10 @@ void initBoxPositions()
 
 void initLights()
 {
-    directionLight.ambientIntensity = 0.1f;
-    directionLight.color = COLOR_CYAN;
-    directionLight.diffuseIntensity = 0.5f;
-    directionLight.direction = {1.0f, 0.0f, 0.0f};
+    directionalLight.ambientIntensity = 0.1f;
+    directionalLight.color = COLOR_CYAN;
+    directionalLight.diffuseIntensity = 0.5f;
+    directionalLight.direction = {1.0f, 0.0f, 0.0f};
 
     pointLights[0].diffuseIntensity = 0.2f;
     pointLights[0].color = COLOR_GREEN;
@@ -99,11 +156,28 @@ void initGeometryPass()
     geometryPass.loadUniforms(glusProgram.program);
 }
 
+void initDirectionalLightPass()
+{
+    GLUStextfile vertexSource;
+    GLUStextfile fragmentSource;
+    GLUSprogram glusProgram;
+
+    glusFileLoadText("./light_pass.vs", &vertexSource);
+    glusFileLoadText("./directional_light_pass.fs", &fragmentSource);
+    glusProgramBuildFromSource(&glusProgram, const_cast<const GLUSchar **>(&vertexSource.text),
+            0, 0, 0, const_cast<const GLUSchar **>(&fragmentSource.text));
+    glusFileDestroyText(&vertexSource);
+    glusFileDestroyText(&fragmentSource);
+
+    directionalLightPass.loadUniforms(glusProgram.program);
+}
+
 GLUSboolean init(GLUSvoid)
 {
     initBoxPositions();
     initLights();
     initGeometryPass();
+    initDirectionalLightPass();
 
     GLuint vao;
     glGenVertexArrays(1, &vao);
@@ -168,38 +242,31 @@ void beginLightPasses()
     glBlendEquation(GL_FUNC_ADD);
     glBlendFunc(GL_ONE, GL_ONE);
 
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     pGBuffer->bindForReading();
     glClear(GL_COLOR_BUFFER_BIT);
 }
 
-void renderLightPass()
+void renderDirectionalLightPass()
 {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glUseProgram(directionalLightPass.program);
 
-    pGBuffer->bindForReading();
+    Matrix4x4f identity = Matrix4x4f::identity();
+    glUniformMatrix4fv(directionalLightPass.modelMatrix, 1, GL_FALSE, identity.const_value_ptr());
+    glUniformMatrix4fv(directionalLightPass.viewMatrix, 1, GL_FALSE, identity.const_value_ptr());
+    glUniformMatrix4fv(directionalLightPass.projectionMatrix, 1, GL_FALSE, identity.const_value_ptr());
 
-    GLint halfWidth = WINDOW_WIDTH / 2;
-    GLint halfHeight = WINDOW_HEIGHT / 2;
+    directionalLightPass.bindUniforms();
 
-    pGBuffer->setReadBuffer(GBuffer::GBUFFER_TEXTURE_TYPE_POSITION);
-    glBlitFramebuffer(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, 0, 0, halfWidth, halfHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+    pQuadMesh->Render();
 
-    pGBuffer->setReadBuffer(GBuffer::GBUFFER_TEXTURE_TYPE_DIFFUSE);
-    glBlitFramebuffer(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, 0, halfHeight, halfWidth, WINDOW_HEIGHT, GL_COLOR_BUFFER_BIT, GL_LINEAR);
-
-    pGBuffer->setReadBuffer(GBuffer::GBUFFER_TEXTURE_TYPE_NORMAL);
-    glBlitFramebuffer(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, halfWidth, halfHeight, WINDOW_WIDTH, WINDOW_HEIGHT, GL_COLOR_BUFFER_BIT, GL_LINEAR);
-
-    pGBuffer->setReadBuffer(GBuffer::GBUFFER_TEXTURE_TYPE_TEXCOORD);
-    glBlitFramebuffer(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, halfWidth, 0, WINDOW_WIDTH, halfHeight, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+    glUseProgram(0);
 }
 
 GLUSboolean update(GLUSfloat time)
 {
     renderGeometryPass(); 
     beginLightPasses();
-    renderLightPass();
+    renderDirectionalLightPass();
 
     return GLUS_TRUE;
 }

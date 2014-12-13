@@ -11,10 +11,9 @@ class GBuffer
             GBUFFER_TEXTURE_TYPE_POSITION,
             GBUFFER_TEXTURE_TYPE_DIFFUSE,
             GBUFFER_TEXTURE_TYPE_NORMAL,
-            GBUFFER_TEXTURE_TYPE_TEXCOORD,
             GBUFFER_NUM_TEXTURES
         };
-
+        
         GBuffer(int windowWidth, int windowHeight)
         {
             glGenFramebuffers(1, &fbo);
@@ -27,6 +26,8 @@ class GBuffer
             for (int i = 0; i < GBUFFER_NUM_TEXTURES; i++) {
                 glBindTexture(GL_TEXTURE_2D, textures[i]);
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, windowWidth, windowHeight, 0, GL_RGB, GL_FLOAT, NULL);
+                glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
                 glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, drawBuffers[i], GL_TEXTURE_2D, textures[i], 0);
             }
 
@@ -63,7 +64,11 @@ class GBuffer
 
         void setReadBuffer(GBUFFER_TEXTURE_TYPE textureType)
         {
-            glReadBuffer(GL_COLOR_ATTACHMENT0 + textureType);
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+            for (int i = 0 ; i < GBUFFER_NUM_TEXTURES; i++) {
+                glActiveTexture(GL_TEXTURE0 + i);		
+                glBindTexture(GL_TEXTURE_2D, textures[i]);
+            }
         }
 
     private:
