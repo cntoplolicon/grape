@@ -14,9 +14,14 @@ out vec2 texCoord0;
 
 void main()
 {
-    gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
-    position0 = (modelMatrix * vec4(position, 1.0)).xyz;
+    mat4 modelViewMatrix = viewMatrix * modelMatrix;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    position0 = (modelViewMatrix * vec4(position, 1.0)).xyz;
+
+    mat4 modelViewMatrixForNormal = modelViewMatrix;
+    modelViewMatrixForNormal = inverse(modelViewMatrixForNormal);
+    modelViewMatrixForNormal = transpose(modelViewMatrixForNormal);
+    normal0 = (modelViewMatrixForNormal * vec4(normal, 0.0)).xyz;
     texCoord0 = texCoord;
-    normal0 = normal;
 }
 
