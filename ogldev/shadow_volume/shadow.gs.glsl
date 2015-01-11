@@ -8,14 +8,12 @@ in vec3 PosL[]; // an array of 6 vertices (triangle with adjacency)
 uniform vec3 lightPosition;
 uniform mat4 MVPMatrix;
 
-float EPSILON = 0.0001;
-
 // Emit a quad using a triangle strip
 void EmitQuad(vec3 StartVertex, vec3 EndVertex)
 {    
     // Vertex #1: the starting vertex (just a tiny bit below the original edge)
     vec3 LightDir = normalize(StartVertex - lightPosition);   
-    gl_Position = MVPMatrix * vec4((StartVertex + LightDir * EPSILON), 1.0);
+    gl_Position = MVPMatrix * vec4(StartVertex, 1.0);
     EmitVertex();
  
     // Vertex #2: the starting vertex projected to infinity
@@ -24,7 +22,7 @@ void EmitQuad(vec3 StartVertex, vec3 EndVertex)
     
     // Vertex #3: the ending vertex (just a tiny bit below the original edge)
     LightDir = normalize(EndVertex - lightPosition);
-    gl_Position = MVPMatrix * vec4((EndVertex + LightDir * EPSILON), 1.0);
+    gl_Position = MVPMatrix * vec4(EndVertex, 1.0);
     EmitVertex();
     
     // Vertex #4: the ending vertex projected to infinity
@@ -78,15 +76,15 @@ void main()
 
         // render the front cap
         LightDir = (normalize(PosL[0] - lightPosition));
-        gl_Position = MVPMatrix * vec4((PosL[0] + LightDir * EPSILON), 1.0);
+        gl_Position = MVPMatrix * vec4(PosL[0], 1.0);
         EmitVertex();
 
         LightDir = (normalize(PosL[2] - lightPosition));
-        gl_Position = MVPMatrix * vec4((PosL[2] + LightDir * EPSILON), 1.0);
+        gl_Position = MVPMatrix * vec4(PosL[2], 1.0);
         EmitVertex();
 
         LightDir = (normalize(PosL[4] - lightPosition));
-        gl_Position = MVPMatrix * vec4((PosL[4] + LightDir * EPSILON), 1.0);
+        gl_Position = MVPMatrix * vec4(PosL[4], 1.0);
         EmitVertex();
         EndPrimitive();
  

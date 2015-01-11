@@ -183,6 +183,8 @@ void renderShadowInfoStencil(const MVP &boxMVP)
     glDepthMask(GL_FALSE);
     glEnable(GL_DEPTH_CLAMP);        
     glDisable(GL_CULL_FACE);
+    glEnable(GL_POLYGON_OFFSET_FILL);
+    glPolygonOffset(1.0, 1.0);
     
     glStencilFunc(GL_ALWAYS, 0, 0xff);
     glStencilOpSeparate(GL_BACK, GL_KEEP, GL_INCR_WRAP, GL_KEEP);
@@ -200,6 +202,7 @@ void renderShadowInfoStencil(const MVP &boxMVP)
     glDisable(GL_DEPTH_CLAMP);
     glEnable(GL_CULL_FACE);                  
     glDepthMask(GL_TRUE);
+    glDisable(GL_POLYGON_OFFSET_FILL);
 }
 
 void renderShadowedScene(const MVP &boxMVP, const MVP &quadMVP)
