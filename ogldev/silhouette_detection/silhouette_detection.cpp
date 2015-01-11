@@ -86,7 +86,6 @@ GLUSboolean init(GLUSvoid)
 
     glEnable(GL_DEPTH_TEST);
     glDepthMask(GL_TRUE);
-    glDepthFunc(GL_LEQUAL);
 
     directionalLight.color = {1.0f, 1.0f, 1.0f};
     directionalLight.ambientIntensity = 0.55f;
@@ -139,9 +138,13 @@ GLUSboolean update(GLUSfloat time)
     // texture
     glUniform1i(program.textureSampler, 0);
 
+    // depth bais
+    glEnable(GL_POLYGON_OFFSET_FILL);
+    glPolygonOffset(1.0, 1.0);
+
     pMesh->Render();
 
-    glUseProgram(0);
+    glDisable(GL_POLYGON_OFFSET_FILL);
 
     glUseProgram(silhouetteProgram.program);
 
