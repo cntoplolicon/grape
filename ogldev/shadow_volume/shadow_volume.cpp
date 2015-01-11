@@ -165,21 +165,9 @@ void renderScene(const MVP &boxMVP, const MVP &quadMVP)
     pQuadMesh->Render();
 }
 
-void renderSceneIntoDepth(const MVP &boxMVP, const MVP &quadMVP)
-{
-    glDrawBuffer(GL_NONE);
-
-    glUseProgram(lightingProgram.program);
-
-    pointLight.ambientIntensity = 0.0f;
-    pointLight.diffuseIntensity = 0.0f;
-    renderScene(boxMVP, quadMVP);
-
-    glUseProgram(0);
-}
-
 void renderShadowInfoStencil(const MVP &boxMVP)
 {
+    glDrawBuffer(GL_NONE);
     glDepthMask(GL_FALSE);
     glEnable(GL_DEPTH_CLAMP);        
     glDisable(GL_CULL_FACE);
@@ -203,11 +191,14 @@ void renderShadowInfoStencil(const MVP &boxMVP)
     glEnable(GL_CULL_FACE);                  
     glDepthMask(GL_TRUE);
     glDisable(GL_POLYGON_OFFSET_FILL);
+    glDrawBuffer(GL_BACK);
 }
 
 void renderShadowedScene(const MVP &boxMVP, const MVP &quadMVP)
 {
-    glDrawBuffer(GL_BACK);
+    glEnable(GL_BLEND);
+    glBlendEquation(GL_FUNC_ADD);
+    glBlendFunc(GL_ONE, GL_ONE);
     glStencilFunc(GL_EQUAL, 0x0, 0xFF);
     glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
     glClear(GL_DEPTH_BUFFER_BIT);
@@ -220,15 +211,11 @@ void renderShadowedScene(const MVP &boxMVP, const MVP &quadMVP)
     renderScene(boxMVP, quadMVP);
 
     glUseProgram(0);
+    glDisable(GL_BLEND);
 }
 
 void renderAmbientScene(const MVP &boxMVP, const MVP &quadMVP)
 {
-    glEnable(GL_BLEND);
-    glBlendEquation(GL_FUNC_ADD);
-    glBlendFunc(GL_ONE, GL_ONE);
-    glClear(GL_DEPTH_BUFFER_BIT);
-
     glUseProgram(lightingProgram.program);
 
     pointLight.ambientIntensity = 0.2f;
@@ -237,8 +224,6 @@ void renderAmbientScene(const MVP &boxMVP, const MVP &quadMVP)
     renderScene(boxMVP, quadMVP); 
 
     glUseProgram(0);
-    
-    glDisable(GL_BLEND);
 }
 
 GLUSboolean update(GLUSfloat time)
@@ -253,12 +238,11 @@ GLUSboolean update(GLUSfloat time)
     m = Matrix4x4f::identity().rotatex(90.0f).scale({10.0f, 10.0f, 10.0f});
     MVP quadMVP(m, v, p);
 
-    renderSceneIntoDepth(boxMVP, quadMVP);
+    renderAmbientScene(boxMVP, quadMVP);
     glEnable(GL_STENCIL_TEST);
     renderShadowInfoStencil(boxMVP);
     renderShadowedScene(boxMVP, quadMVP);
     glDisable(GL_STENCIL_TEST);
-    renderAmbientScene(boxMVP, quadMVP);
 
     return GLUS_TRUE;
 }
