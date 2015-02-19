@@ -68,7 +68,6 @@ flags = [
 './include',
 '-I',
 './framework',
-'`pkg-config --cflags ImageMagick++`',
 '-isystem',
 '/usr/include',
 '-isystem',
